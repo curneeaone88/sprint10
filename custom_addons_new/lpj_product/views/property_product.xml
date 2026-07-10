@@ -1,0 +1,55 @@
+<odoo>
+    <data>
+
+        <record id="dataform_product_template_form_view" model="ir.ui.view">
+            <field name="inherit_id" ref="product.product_template_form_view"/>
+            <field name="model">product.template</field>
+            <field name="arch" type="xml">
+                <field name="categ_id" position="after">
+                    <field name="x_customer"/>
+                    <field name="x_length"/>
+                    <field name="x_width"/>
+                    <!--<field name="x_material"/>-->
+                    <field name="x_bahan" />
+                    <field name="x_bentuk"/>
+                    <field name="x_diecut"/>
+                    <field name="x_offering"/>
+                    <field name="x_satuan"/>
+                    <field name="x_type_roll"/>
+                    <field name="x_finishing" invisible="1"/>
+                    <field name="x_finishing_2" invisible="1"/>
+                    <field name="x_feature" widget="many2many_checkboxes"/>
+                </field>
+                <field name="list_price" position="before">
+<!--                    <field name="x_variant_sku_prd"/>-->
+                    <field name="x_product_list_layout"/>
+                </field>
+            </field>
+        </record>
+
+
+<!--        <record id="dataform_product_template_form_view" model="ir.ui.view">-->
+<!--            <field name="inherit_id" ref="product.product_template_form_view"/>-->
+<!--            <field name="model">product.template</field>-->
+<!--            <field name="arch" type="xml">-->
+<!--                <field name="list_price" position="before">-->
+<!--                    -->
+<!--                </field>-->
+<!--            </field>-->
+<!--        </record>-->
+
+        <!-- Inherit tree view master product -->
+        <record model="ir.ui.view" id="product_template_tree_view">
+            <field name="name">product.template_tree_view</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_tree_view"/>
+            <field name="arch" type="xml">
+                <field name="name" position="after">
+                    <field name="x_length"></field>
+                    <field name="x_width"></field>
+                    <field name="x_variant_sku_prd"/>
+                </field>
+            </field>
+        </record>
+    </data>
+</odoo>

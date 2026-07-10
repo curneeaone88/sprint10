@@ -1,0 +1,44 @@
+<odoo>
+    <data>
+        <record model="ir.ui.view" id="sj_supplier_view">
+            <field name="name">stock.picking.sjsupplier</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+
+                <!-- Stock pack operation -->
+                <field name="qty_done" position="after">
+                    <field name="x_weight" ></field>
+                    <field name="x_qty_total" ></field>
+                    <field name="x_note"></field>
+               </field>
+
+
+                <xpath expr="//field[@name='note']" position="replace">
+                    <group>
+                        <field name="x_note_sjk" />
+                    </group>
+                </xpath>
+
+                <xpath expr="//field[@name='origin']" position="after">
+                    <field name="x_status_invoice" attrs="{'invisible': [('picking_type_id', '!=', 4)]}"/>
+                </xpath>
+
+                <xpath expr="//field[@name='partner_id']" position="after">
+                    <field name="x_sj_supplier" attrs="{'invisible': [('picking_type_id', '!=', 1)]}"/>
+                </xpath>
+
+                <xpath expr="//button[@name='button_scrap']" position="after">
+                    <button name="push_invoice_jurnal" groups="account.group_account_user"
+                            string="Create Invoice JurnalId" type="object" class="oe_highlight"
+                            attrs="{'invisible': ['|',('x_status_invoice','!=','none'),('state','!=','done')]}"/>
+                </xpath>
+            </field>
+        </record>
+
+
+    </data>
+</odoo>
+
+
+

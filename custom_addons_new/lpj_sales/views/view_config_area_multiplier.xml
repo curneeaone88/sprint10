@@ -1,0 +1,41 @@
+<odoo>
+    <data>
+
+        <record model="ir.ui.view" id="config_area_multiplier_tree">
+            <field name="name">x.config.area.multiplier.tree</field>
+            <field name="model">x.config.area.multiplier</field>
+            <field name="arch" type="xml">
+
+                <tree>
+                    <field name="name"/>
+                    <field name="x_min_unit"/>
+                    <field name="x_max_unit"/>
+                    <field name="x_unit_area_multiplier"/>
+                </tree>
+            </field>
+        </record>
+
+         <record model="ir.ui.view" id="config_area_multiplier_form">
+            <field name="name">x.config.area.multiplier.form</field>
+            <field name="model">x.config.area.multiplier</field>
+            <field name="arch" type="xml">
+                <form>
+                        <group>
+                            <field name="name"/>
+                            <field name="x_min_unit"/>
+                            <field name="x_max_unit"/>
+                            <field name="x_unit_area_multiplier"/>
+                        </group>
+                </form>
+            </field>
+        </record>
+
+        <record model="ir.actions.act_window" id="list_area_multiplier">
+            <field name="name">Config Area Multiplier</field>
+            <field name="res_model">x.config.area.multiplier</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+    </data>
+</odoo>

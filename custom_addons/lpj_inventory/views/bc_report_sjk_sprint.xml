@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <report
+            string="Delivery Slip Sprint"
+            id="action_report_delivery_sprint_custom"
+            model="stock.picking"
+            report_type="qweb-pdf"
+            name="lpj_inventory.report_deliveryslip_sprint_custom"
+            file="lpj_inventory.report_deliveryslip_sprint_custom"
+        />
+
+        <record id="paperformat_surat_jalan_sprint" model="report.paperformat">
+            <field name="name">European A4 low margin</field>
+            <field name="default" eval="True" />
+            <field name="format">A4</field>
+            <field name="page_height">0</field>
+            <field name="page_width">0</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">8</field>
+            <field name="margin_bottom">8</field>
+            <field name="margin_left">8</field>
+            <field name="margin_right">8</field>
+            <field name="header_line" eval="False" />
+            <field name="header_spacing">0</field> <!-- Jika ingin header muncul ubah nilai - 0 -->
+            <field name="dpi">90</field>
+        </record>
+
+        <record id="lpj_inventory.action_report_delivery_sprint_custom" model="ir.actions.report.xml">
+            <field name="paperformat_id" ref="lpj_inventory.paperformat_surat_jalan_sprint" />
+        </record>
+
+        <template id="report_delivery_sprint_document_custom">
+            <t t-call="report.html_container">
+                <t t-call="report.html_container">
+                    <t t-set="o" t-value="o.with_context({'lang':o.partner_id.lang})" />
+                    <div class="page">
+                        <!-- Row logo laprint -->
+                        <div class="row">
+                            <div class="col-xs-3" style="margin: -50px 0;">
+                                <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' %res_company.logo" style="width: 100%"/>
+                            </div>
+                            <div class="col-xs-9 text-right">
+                                <p style="padding-top:5px"><b><h2>Surat Jalan Penjualan </h2></b></p>
+                            </div>
+                        </div>
+                        <!--<br></br>-->
+
+                        <!--&lt;!&ndash; Untuk garis horizontal&ndash;&gt;-->
+                        <!--<div class="row zero_min_height">-->
+                            <!--<div class="col-xs-12">-->
+                                <!--<div style="border-bottom: 1px solid black;"/>-->
+                            <!--</div>-->
+                        <!--</div>-->
+
+                        <!-- Judul -->
+                        <div class="row">
+                            <div class="col-xs-7" style="margin-top: 10px;">
+                                <table>
+                                    <tr><td colspan="3" style="text-decoration:underline; font-size: 17px; font-weight:bold; padding-bottom:5px;">
+                                        <span>SUKSES PRINTNUSA INDONESIA, PT</span>
+                                    </td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-right: 40px; padding-bottom:5px;"><b>No. Surat Jalan</b></td>
+                                        <td style="padding-right: 10px; padding-bottom:5px;">:</td>
+                                        <td style="font-size: 16px; padding-bottom:5px;"><t t-if="o.name"><span t-field="o.name"></span></t></td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-right: 40px; padding-bottom:5px;"><b>Tanggal</b></td>
+                                        <td style="padding-right: 10px; padding-bottom:5px;">:</td>
+                                        <td style="font-size: 16px; padding-bottom:5px;"><t t-if="o.min_date"><span t-field="o.min_date" t-field-options='{"format": "d/MM/y"}'></span></t></td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-right: 40px; padding-bottom:5px;"><b>PO Customer</b></td>
+                                        <td style="padding-right: 10px; padding-bottom:5px;" >:</td>
+                                        <td style="font-size: 16px; padding-bottom:5px;"><t t-if="o.origin"><span t-field="o.origin"></span></t></td>
+                                    </tr>
+                                    <!--<tr >-->
+                                        <!--<td style="font-size: 15px; padding-right: 40px; padding-bottom:5px;"><b>No. SJ Supplier</b></td>-->
+                                        <!--<td style="padding-right: 10px; padding-bottom:5px;" >:</td>-->
+                                        <!--<td style="font-size: 16px; padding-bottom:5px;"><t t-if="o.origin"><span t-field="o.x_sj_supplier"></span></t></td>-->
+                                    <!--</tr>-->
+                                </table>
+                            </div>
+                            <div class="col-xs-5" name="customer_address" style="margin-top: 10px;">
+                                <div>
+                                    <span style="font-size: 14px;"><strong>Customer Address :</strong></span>
+                                </div>
+                                <div style="font-size: 14px; font-weight:bold;" t-if="o.move_lines and o.move_lines[0].partner_id and not o.partner_id" name="partner_header">
+                                    <span t-field="o.move_lines[0].partner_id" t-options='{"widget": "contact", "fields": ["address", "name"], "no_marker": True}'/>
+                                </div>
+                                <div style="font-size: 14px;" t-if="o.partner_id" name="partner_header">
+                                    <div t-field="o.partner_id" t-options='{"widget": "contact", "fields": ["address", "name"], "no_marker": True}'/>
+                                </div>
+                            </div>
+                        </div> <!-- Tutup Row Alamat -->
+
+                        <div class="row" >
+                            <div class="col-xs-12" style="margin-top: 20px">
+                                <!-- Jika Operation -->
+                                <table style="border: 1px solid; width: 100%;" t-if="o.pack_operation_product_ids">
+                                        <thead>
+                                            <tr style="font-size: 15px;">
+                                                <th style="border: 1px solid black; text-align:center; width: 40%; padding: 5px;"><strong>Product</strong></th>
+                                                <th style="border: 1px solid black; text-align:center; padding: 5px;"><strong>Qty PO (Pcs)</strong></th>
+                                                <th style="border: 1px solid black; text-align:center; padding: 5px;"><strong>Total Qty (Pcs)</strong></th>
+                                              <!--  <th style="border: 1px solid black; text-align:center; padding: 5px;"><strong>Total Weight (Kg)</strong></th> -->
+                                              <!--  <th style="border: 1px solid black; text-align:center; padding: 5px;"><strong>Qty Total (Roll/Sheet)</strong></th> -->
+                                                <th style="border: 1px solid black; text-align:center; width: 30%; padding: 5px;"><strong>Description</strong></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr style="font-size: 15px;" t-foreach="o.pack_operation_ids" t-as="pack_operation">
+                                                <td style="border: 1px solid black; padding: 8px 5px;">
+                                                    <span  t-field="pack_operation.product_id"></span>
+                                                </td>
+                                                <td style="border: 1px solid black; text-align:center; padding: 8px 5px;">
+                                                    <span t-field="pack_operation.product_qty"></span> Pcs
+                                                </td>
+                                                <td style="border: 1px solid black; text-align:center; padding: 8px 5px;">
+                                                     <span t-field="pack_operation.qty_done"></span> Pcs
+                                                </td>
+                                              <!--  <td style="border: 1px solid black; text-align:center; padding: 8px 5px;">
+                                                    <span t-field="pack_operation.x_weight"></span>
+                                                </td>
+                                                <td style="border: 1px solid black; text-align:center; padding: 8px 5px;">
+                                                    <span t-field="pack_operation.x_qty_total"></span>
+                                                </td> -->
+                                                <td style="border: 1px solid black; text-align:center; padding: 8px 5px;">
+                                                    <span t-field="pack_operation.x_note"></span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                <p t-if="o.backorder_id" style="font-size: 16px;">
+                                    This shipment is a backorder of <t t-esc="o.backorder_id.name"/>.
+                                </p>
+                                <br></br>
+                            </div>
+                        </div>
+
+                        <!-- Row TTD -->
+                        <div class="row">
+                            <table>
+                                <div style="margin-top: 10px;">
+                                    <div class="col-xs-3">
+                                        <h5 class="text-center" style="font-size: 15px;"><b>Penerima</b></h5>
+                                        <br></br>
+                                        <br></br>
+                                        <p class="text-center">.................................</p>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <h5 class="text-center" style="font-size: 15px;"><b>Pengirim</b></h5>
+                                        <br></br>
+                                        <br></br>
+                                        <p class="text-center">.................................</p>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <h5 class="text-center" style="font-size: 15px;"><b>Driver</b></h5>
+                                        <br></br>
+                                        <br></br>
+                                        <p class="text-center">.................................</p>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <h5 class="text-center" style="font-size: 15px;"><b>Satpam</b></h5>
+                                        <br></br>
+                                        <br></br>
+                                        <p class="text-center">.................................</p>
+                                    </div>
+                                </div>
+                            </table>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xs-12" style="font-size: 16px;">
+                                <h5 style="font-size: 16px; font-weight:bold;">Note : </h5>
+                                <td><p><span t-field="o.x_note_sjk"/></p></td>
+                            </div>
+                        </div>
+                        <br/>
+
+                        <!-- Footer -->
+                        <div class="row">
+                            <div class="col-xs-12" style="width: 100%;">
+                                <div class="text-center" style="border-top: 1px solid black;">
+                                    <ul t-if="not res_company.custom_footer" style="list-style: none; margin: 0 auto; font-size: 14px;">
+                                        <t t-set="res_company" t-value="res_company.sudo()"/>
+                                        <li t-if="res_company.street">Office: <span t-field="res_company.street"/> <span t-field="res_company.street2"/> <span t-field="res_company.city"/> <span t-field="res_company.zip"/></li>
+                                        <li t-if="res_company.phone">Phone: <span t-field="res_company.phone"/> • WA: (+62)856-4842-1306/(+62)822-1100-0351 </li>
+                                        <li t-if="res_company.email">Email: <span t-field="res_company.email"/> • Website: <span t-field="res_company.website"></span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    <!-- Tutup Footer -->
+                    </div> <!-- Tutup page -->
+                </t>
+             </t>
+        </template>
+
+        <template id="report_deliveryslip_sprint_custom">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="lpj_inventory.report_delivery_sprint_document_custom" t-lang="o.partner_id.lang"/>
+            </t>
+        </template>
+
+    </data>
+</odoo>

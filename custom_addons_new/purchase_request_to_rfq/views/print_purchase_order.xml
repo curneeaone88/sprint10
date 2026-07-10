@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <report
+            string="Purchase Order Sprint"
+            id="action_report_po_print_custom"
+            model="purchase.order"
+            report_type="qweb-pdf"
+            name="purchase_request_to_rfq.report_purchaseorder_print_custom"
+            file="purchase_request_to_rfq.report_purchaseorder_print_custom"
+        />
+
+        <record id="paperformat_purchase_order_print" model="report.paperformat">
+            <field name="name">European A4 low margin</field>
+            <field name="default" eval="True" />
+            <field name="format">A4</field>
+            <field name="page_height">0</field>
+            <field name="page_width">0</field>
+            <field name="orientation">Landscape</field>
+            <field name="margin_top">8</field>
+            <field name="margin_bottom">8</field>
+            <field name="margin_left">8</field>
+            <field name="margin_right">8</field>
+            <field name="header_line" eval="False" />
+            <field name="header_spacing">0</field> <!-- Jika ingin header muncul ubah nilai - 0 -->
+            <field name="dpi">90</field>
+        </record>
+
+        <record id="purchase_request_to_rfq.action_report_po_print_custom" model="ir.actions.report.xml">
+            <field name="paperformat_id" ref="purchase_request_to_rfq.paperformat_purchase_order_print" />
+        </record>
+
+        <template id="report_po_print_document_custom">
+            <t t-call="report.html_container">
+                <t t-call="report.html_container">
+                    <t t-set="o" t-value="o.with_context({'lang':o.partner_id.lang})" />
+                    <div class="page">
+                        <!-- Row logo laprint -->
+                        <div class="row">
+                            <div class="col-xs-3" style="margin: -50px 0;">
+                                <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' %res_company.logo" style="width: 50%"/>
+                            </div>
+                            <div class="col-xs-9 text-right">
+                                <p style="padding-top:5px;"><b><h2 style="color:#00016e;">PURCHASE ORDER</h2></b></p>
+                            </div>
+                        </div>
+                        <br></br>
+
+                        <!-- Untuk garis horizontal-->
+                        <div class="row zero_min_height">
+                            <div class="col-xs-12">
+                                <div style="border-bottom: 1px solid black;"/>
+                            </div>
+                        </div>
+
+                        <!-- Judul -->
+                        <div class="row" style="margin-top: 10px;">
+                            <div class="col-xs-12">
+                                <table>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-right: 40px; padding-bottom:5px;"><b>PO NUMBER</b></td>
+                                        <td style="padding-right: 10px; padding-bottom:5px;"><b>:</b></td>
+                                        <td style="font-size: 16px; padding-bottom:5px;"><b>
+                                            <t t-if="o.name"><span t-field="o.name"></span></t></b>
+                                        </td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-right: 40px; padding-bottom:5px;"><b>DATE</b></td>
+                                        <td style="padding-right: 10px; padding-bottom:5px;"><b>:</b></td>
+                                        <td style="font-size: 16px; padding-bottom:5px;"><b>
+                                            <t t-if="o.date_order"><span t-field="o.date_order" t-field-options='{"format": "d/MM/y"}'></span></t></b>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-8" style="margin-top: 10px;">
+                                <table>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-bottom:5px;"><b>To :</b></td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-bottom:5px;"><b>PT. LAPRINT JAYA</b></td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-bottom:5px;"><b>
+                                            <p>Pergudangan Sinar Gedangan Blok B06</p>
+                                            <p>Gemurung, Gedangan</p>
+                                            <p>Sidoarjo, Jawa Timur</p>
+                                        </b></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-xs-4" name="customer_address" style="margin-top: 10px;">
+                               <table>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-bottom:5px;"><b>Ship To :</b></td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-bottom:5px;"><b>PT. SUKSES PRINTNUSA INDONESIA</b></td>
+                                    </tr>
+                                    <tr >
+                                        <td style="font-size: 15px; padding-bottom:5px;"><b>
+                                            <p>Sinarmas Land Plaza  Surabaya</p>
+                                            <p>Jl. Pemuda No. 60-70, suite 7042</p>
+                                            <p>Surabaya, Jawa Timur</p>
+                                        </b></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div> <!-- Tutup Row Alamat -->
+
+                        <div class="row" >
+                            <!--<div class="col-xs-12" name="customer_address" style="margin-top: 10px;">-->
+                               <!--<table style="border: 0px ">-->
+                                <!--<tr>-->
+                                    <!--<td style="font-size: 15px; padding-right:45px"><b>SUPPLIER BAHAN : <span>RAFLATAC</span></b></td>-->
+                                    <!--<td style="font-size: 15px;"><b>Std Pakcing : <span>Kertas Release (Kirim Sidoarjo)</span></b></td>-->
+                                <!--</tr>-->
+                               <!--</table>-->
+                            <!--</div>-->
+                            <div class="col-xs-12" style="margin-top: 5px;">
+                                <!-- Jika Operation -->
+                                <table style="width: 100%;">
+                                    <tr style="font-size: 15px;">
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>No.</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; width: 25%; padding: 5px;"><strong>Nama Item</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Duedate</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Status (New/Repeat)</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Ukuran (mm)</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; width: 13%; padding: 5px;"><strong>Bahan</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Finishing</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Quantity (Pcs)</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Quantity (m2)</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; padding: 5px;"><strong>Unit Price (Rp/m2)</strong></th>
+                                        <th style="border: 1px solid ; text-align:center; width: 12%; padding: 5px;"><strong>Total</strong></th>
+                                    </tr>
+
+                                    <t t-set="i" t-value="1"/>
+                                    <tr style="font-size: 15px;" t-foreach="o.order_line" t-as="order">
+                                        <td style="border: 1px solid; text-align:center; padding: 8px 5px;">
+                                            <span t-esc="i"/><t t-set="i" t-value="i+1"/>
+                                        </td>
+                                        <td style="border: 1px solid ; padding: 8px 5px;">
+                                            <span t-field="order.name"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:center; padding: 8px 5px;">
+                                             <span t-field="order.date_planned" t-field-options='{"format": "d/MM/y"}'></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:center; padding: 8px 5px;">
+                                            <span t-field="order.x_sts_repeat"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:center; padding: 8px 5px;">
+                                            <span t-field="order.x_ukuran"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:center; padding: 8px 5px;">
+                                            <span t-field="order.x_bahan"></span>
+                                        </td>
+                                         <td style="border: 1px solid ; text-align:center; padding: 8px 5px;">
+                                            <span t-field="order.x_finishing"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                             <span t-field="order.product_qty"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                            <span t-field="order.x_qty_meterpersegi_po"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                            <span t-field="order.x_harga_meterpersegi"></span>
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                            <span t-field="order.price_subtotal"></span>
+                                        </td>
+                                    </tr>
+                                    <tr style="font-size: 15px;">
+                                        <td colspan ="7" rowspan="5" style="padding: 8px 5px; font-weight:bold">
+                                            <p style="font-size: 16px;">NOTE :<span t-field="o.notes"></span></p>
+                                        </td>
+                                        <td colspan ="3" style="border: 1px solid ; font-weight:bold;  text-align:right; padding: 8px 5px;"> Sub Total
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                             <span t-field="o.amount_untaxed"></span>
+                                        </td>
+                                    </tr>
+                                    <tr style="font-size: 15px;" >
+                                        <td colspan ="3" style="border: 1px solid ; font-weight:bold;  text-align:right; padding: 8px 5px;">Discount (9.9%)
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                             <!--<span t-field="pack_operation.qty_done"></span> Pcs-->
+                                        </td>
+                                    </tr>
+                                    <tr style="font-size: 15px;" >
+                                        <td colspan ="3" style="border: 1px solid ; font-weight:bold;  text-align:right; padding: 8px 5px;">Sales Tax
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                             <span t-field="o.amount_tax"></span>
+                                        </td>
+                                    </tr>
+                                    <tr style="font-size: 15px;">
+                                        <td colspan ="3" style="border: 1px solid ; font-weight:bold;  text-align:right; padding: 8px 5px;">Other
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                             <!--<span t-field="pack_operation.qty_done"></span> Pcs-->
+                                        </td>
+                                    </tr>
+                                    <tr style="font-size: 15px;">
+                                        <td colspan ="3" style="border: 1px solid ; font-weight:bold; text-align:center; padding: 8px 5px;">GRAND TOTAL
+                                        </td>
+                                        <td style="border: 1px solid ; text-align:right; padding: 8px 5px;">
+                                             <span t-field="o.amount_total"></span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="row" style="font-size: 16px; margin-top: 25px">
+                            <div class="col-xs-8">
+                                <span style="font-weight:bold; margin-bottom:0px">Created By <span t-field="o.create_uid"/> <span t-field="o.create_date" t-field-options='{"format": "dd/MM/y"}'/></span>
+                                <br/>
+                                <span style="font-weight:bold; margin-bottom:0px">Confirmed By <span t-field="o.x_user_confirm"/> <span t-field="o.x_date_confirm" t-field-options='{"format": "dd/MM/y"}'/></span>
+
+                                <!--<t t-foreach="o.message_ids" t-as="f">-->
+                                    <!--<span t-esc="f.mail_message_id.old_value_char"></span>-->
+                                <!--</t>-->
+                                <!--<spanp style="font-weight:bold;">Approval By <span t-field="o.create_uid"/> <span t-field="o.create_date" t-field-options='{"format": "d/MM/y"}'/></spanp>-->
+                            </div>
+                        </div>
+                        <br/>
+
+                        <!-- Footer -->
+                        <!--<div class="row">-->
+                            <!--<div class="col-xs-12" style="width: 100%;">-->
+                                <!--<div class="text-center" style="border-top: 1px solid ;">-->
+                                    <!--<ul t-if="not res_company.custom_footer" style="list-style: none; margin: 0 auto; font-size: 14px;">-->
+                                        <!--<t t-set="res_company" t-value="res_company.sudo()"/>-->
+                                        <!--<li t-if="res_company.street">Office: <span t-field="res_company.street"/> <span t-field="res_company.street2"/> <span t-field="res_company.city"/> <span t-field="res_company.zip"/></li>-->
+                                        <!--<li t-if="res_company.phone">Phone: <span t-field="res_company.phone"/> • WA: (+62)856-4842-1306/(+62)822-1100-0351 </li>-->
+                                        <!--<li t-if="res_company.email">Email: <span t-field="res_company.email"/> • Website: <span t-field="res_company.website"></span></li>-->
+                                    <!--</ul>-->
+                                <!--</div>-->
+                            <!--</div>-->
+                        <!--</div>-->
+                    <!-- Tutup Footer -->
+                     <!-- Tutup page -->
+                    </div>
+                </t>
+             </t>
+        </template>
+
+        <template id="report_purchaseorder_print_custom">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="purchase_request_to_rfq.report_po_print_document_custom" t-lang="o.partner_id.lang"/>
+            </t>
+        </template>
+
+    </data>
+</odoo>

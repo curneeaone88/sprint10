@@ -1,0 +1,15 @@
+<odoo>
+    <data>
+        <record id="res_company_view" model="ir.ui.view">
+            <field name="inherit_id" ref="base.view_company_form"/>
+            <field name="model">res.company</field>
+            <field name="arch" type="xml">
+                <field name="phone" position="after">
+                    <field name="x_phone2"></field>
+                    <field name="x_whatsapp"></field>
+                    <field name="x_whatsapp2"></field>
+                </field>
+            </field>
+        </record>
+    </data>
+</odoo>

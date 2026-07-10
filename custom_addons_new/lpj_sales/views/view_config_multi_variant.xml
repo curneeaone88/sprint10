@@ -1,0 +1,43 @@
+<odoo>
+    <data>
+
+        <record model="ir.ui.view" id="config_multi_variant_tree">
+            <field name="name">x.config.multi.variant.tree</field>
+            <field name="model">x.config.multi.variant</field>
+            <field name="arch" type="xml">
+
+                <tree>
+                    <field name="name"/>
+                    <field name="x_variant_multiplier"/>
+                </tree>
+            </field>
+        </record>
+
+         <record model="ir.ui.view" id="config_multi_variant_form">
+            <field name="name">x.config.multi.variant.form</field>
+            <field name="model">x.config.multi.variant</field>
+            <field name="arch" type="xml">
+                <form>
+
+                        <group>
+                            <field name="name"/>
+                            <field name="x_variant_multiplier"/>
+
+                        </group>
+
+
+                    <!--<button name="act_req_dk" type="object" string="Request" class="oe_highlight" attrs="{'invisible':['|','|',('x_status_cr','=','reject'),('x_flag_reqdk','=',True),('x_flag_appdk','=',True)]}"/>-->
+                    <!--<button name="act_approve" type="object" string="Approve" class="oe_highlight" attrs="{'invisible':['|', '|','|',('x_status_cr','=','approve'), ('x_status_cr','=','reject'),('x_status_cr','=','done'),('x_is_salemanager', '=', False)]}"/>-->
+                </form>
+            </field>
+        </record>
+
+        <record model="ir.actions.act_window" id="list_multi_variant">
+            <field name="name">Config Multi Variant</field>
+            <field name="res_model">x.config.multi.variant</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+    </data>
+</odoo>
