@@ -2,201 +2,201 @@
 <odoo>
     <data>
 
-    <template id="report_proforma_invoice_document">
-        <t t-call="report.html_container">
-            <t t-foreach="docs" t-as="doc">
-                <div class="page" style="font-size:10px">
+        <template id="report_proforma_invoice_document">
+            <t t-call="report.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <div class="page" style="font-size:10px">
 
-                    <!-- HEADER: sama seperti Quotation & Invoice -->
-                    <div class="row">
-                        <div class="col-xs-6">
-                            <img t-if="res_company.logo"
-                                 t-att-src="'data:image/png;base64,%s' % res_company.logo"
-                                 style="width: 33%"/>
-                        </div>
-                        <div class="col-xs-6" style="text-align:right;">
-                            <h5 style="color:#272778; font-size=16px"><strong>Print ideas to life</strong></h5>
-                        </div>
-                    </div>
-                    <br/>
-                    <div class="row zero_min_height">
-                        <div class="col-xs-12">
-                            <div style="border-bottom: 1px solid black;"/>
-                        </div>
-                    </div>
-                    <br/>
-
-                    <!-- NOMOR & TANGGAL -->
-                    <div class="row">
-                        <div class="col-xs-12">
-                            Nomor : <span t-esc="doc.proforma_no"/><br/>
-                            <span style="margin-left:14px;">
-                                Surabaya, <span t-esc="doc.proforma_date" t-options="{'widget': 'date'}"/>
-                            </span>
-                        </div>
-                    </div>
-
-                    <h4 style="text-align:center; margin-top:20px;"><u>PROFORMA INVOICE</u></h4>
-
-                    <div class="row" style="margin-top:15px;">
-                        <div class="col-xs-12">
-                            Kepada Yth,<br/>
-                            <strong t-field="doc.order_id.partner_id.name"/>
-                        </div>
-                    </div>
-
-                    <div class="row" style="margin-top:15px;">
-                        <div class="col-xs-12">
-                            <strong>
-                                Proforma Invoice untuk SPH No. :
-                                <span t-esc="doc.sph_no"/>
-                                &#160;&#160;Tanggal PO :
-                                <span t-esc="doc.tanggal_po" t-options="{'widget': 'date'}"/>
-                            </strong>
-                        </div>
-                    </div>
-
-                    <!-- TABEL ITEM + RINGKASAN DP -->
-                    <table style="width:100%; border-collapse:collapse; margin-top:15px;" border="1" cellpadding="4">
-                        <thead>
-                            <tr style="background-color:#d9d9d9;">
-                                <th style="width:5%; text-align:center;">No</th>
-                                <th style="width:45%; text-align:center;">Deskripsi</th>
-                                <th style="width:15%; text-align:center;">Quantity</th>
-                                <th style="width:15%; text-align:center;">Harga</th>
-                                <th style="width:20%; text-align:center;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <t t-set="item_no" t-value="0"/>
-                            <t t-foreach="doc.order_id.order_line" t-as="line">
-                                <t t-if="not line.display_type">
-                                    <t t-set="item_no" t-value="item_no + 1"/>
-                                    <tr>
-                                        <td style="text-align:center;"><span t-esc="item_no"/></td>
-                                        <td><span t-field="line.name"/></td>
-                                        <td style="text-align:center;">
-                                            <span t-esc="'{:,.0f}'.format(line.product_uom_qty).replace(',', '.')"/>
-                                            <span t-field="line.product_uom"/>
-                                        </td>
-                                        <td style="text-align:right;">
-                                            <span t-esc="'Rp. ' + '{:,.0f}'.format(line.price_unit).replace(',', '.') + ',-'"/>
-                                        </td>
-                                        <td style="text-align:right;">
-                                            <span t-esc="'Rp. ' + '{:,.0f}'.format(line.price_subtotal).replace(',', '.')"/>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </t>
-
-                            <tr>
-                                <td colspan="3" rowspan="4" style="vertical-align:top; font-size:9px;">
-                                    <strong>Alamat transfer :</strong><br/>
-                                    Account Name :<br/>
-                                    <strong t-field="doc.order_id.company_id.name"/><br/><br/>
-                                    Account Number : <strong>464 745 7788</strong><br/>
-                                    Bank <strong>BCA KCP Kertajaya Indah – Surabaya</strong>
-                                </td>
-                                <td><strong>Sub Total</strong></td>
-                                <td style="text-align:right;">
-                                    <strong t-esc="'Rp. ' + '{:,.0f}'.format(doc.order_id.amount_untaxed).replace(',', '.')"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>DP</td>
-                                <td style="text-align:right;">
-                                    <span t-esc="'Rp. ' + '{:,.0f}'.format(doc.dp_amount).replace(',', '.')"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>PPN <span t-esc="'{:.0f}'.format(doc.tax_id.amount)"/>%</td>
-                                <td style="text-align:right;">
-                                    <span t-esc="'Rp. ' + '{:,.0f}'.format(doc.dp_tax_amount).replace(',', '.')"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Total Pembayaran DP</strong></td>
-                                <td style="text-align:right;">
-                                    <strong t-esc="'Rp. ' + '{:,.0f}'.format(doc.total_dp_payment).replace(',', '.')"/>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div class="row" style="margin-top:60px;">
-                        <div class="col-xs-6">
-                            Hormat Kami,<br/><br/><br/>
-                            <strong t-field="doc.order_id.company_id.name"/>
-                        </div>
-                    </div>
-
-                    <!-- FOOTER: sama seperti Quotation & Invoice -->
-                    <div class="oe_structure"/>
-                    <div style="position: fixed; bottom: 0mm; left: 0; right: 0; width: 100%;">
-                        <div class="row" style="margin-top:30px">
-                            <div class="col-xs-6">
-                                <span style="color:#272778">
-                                    <strong>Address:</strong>
-                                </span>
-                            </div>
-                            <div class="col-xs-6;" style="text-align:right;">
-                            </div>
-                        </div>
+                        <!-- HEADER: sama seperti Quotation & Invoice -->
                         <div class="row">
                             <div class="col-xs-6">
+                                <img t-if="res_company.logo"
+                                    t-att-src="'data:image/png;base64,%s' % res_company.logo"
+                                    style="width: 33%"/>
                             </div>
-                            <div class="col-xs-6;" style="text-align:right;">
-                                <span style="color:#272778;">
-                                    Phone:(+62)31–35936020
-                                </span>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-xs-6">
-                                <span style="color:#272778">
-                                    Jl. Karimun Jawa No. 12-Gubeng, Surabaya, 60281
-                                </span>
-                            </div>
-                            <div class="col-xs-6;" style="text-align:right;">
-                                <span style="color:#272778;">
-                                    Whatsapp: (+62) 811-3319889
-                                </span>
+                            <div class="col-xs-6" style="text-align:right;">
+                                <h5 style="color:#272778; font-size=16px"><strong>Print ideas to life</strong></h5>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-xs-6">
-                                <span style="color:#272778">
-                                    Jawa Timur, Indonesia
-                                </span>
-                            </div>
-                            <div class="col-xs-6;" style="text-align:right;">
-                                <span style="color:#272778;">
-                                    Whatsapp: (+62) 856-4842-1306
-                                </span>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-xs-6">
-                                <span style="color:#272778; text-decoration:underline;">
-                                    <strong>Email: sales@s-print.co.id</strong>
-                                </span>
-                            </div>
-                            <div class="col-xs-6;" style="text-align:right;">
-                                <span style="color:#272778; text-decoration:underline;">
-                                    www.s-print.co.id
-                                </span>
-                            </div>
-                        </div>
-                        <div class="row" style="margin-top:20px">
+                        <br/>
+                        <div class="row zero_min_height">
                             <div class="col-xs-12">
-                                <div style="border-bottom: 18px solid #ff4404;"/>
+                                <div style="border-bottom: 1px solid black;"/>
+                            </div>
+                        </div>
+                        <br/>
+
+                        <!-- NOMOR & TANGGAL -->
+                        <div class="row">
+                            <div class="col-xs-12">
+                                Nomor : <span t-esc="doc.proforma_no"/><br/>
+                                <span style="margin-left:14px;">
+                                    Surabaya, <span t-esc="doc.proforma_date" t-options="{'widget': 'date'}"/>
+                                </span>
+                            </div>
+                        </div>
+
+                        <h4 style="text-align:center; margin-top:20px;"><u>PROFORMA INVOICE</u></h4>
+
+                        <div class="row" style="margin-top:15px;">
+                            <div class="col-xs-12">
+                                Kepada Yth,<br/>
+                                <strong t-field="doc.order_id.partner_id.name"/>
+                            </div>
+                        </div>
+
+                        <div class="row" style="margin-top:15px;">
+                            <div class="col-xs-12">
+                                <strong>
+                                    Proforma Invoice untuk SPH No. :
+                                    <span t-esc="doc.sph_no"/>
+                                    &#160;&#160;Tanggal PO :
+                                    <span t-esc="doc.tanggal_po" t-options="{'widget': 'date'}"/>
+                                </strong>
+                            </div>
+                        </div>
+
+                        <!-- TABEL ITEM + RINGKASAN DP -->
+                        <table style="width:100%; border-collapse:collapse; margin-top:15px;" border="1" cellpadding="4">
+                            <thead>
+                                <tr style="background-color:#d9d9d9;">
+                                    <th style="width:5%; text-align:center;">No</th>
+                                    <th style="width:45%; text-align:center;">Deskripsi</th>
+                                    <th style="width:15%; text-align:center;">Quantity</th>
+                                    <th style="width:15%; text-align:center;">Harga</th>
+                                    <th style="width:20%; text-align:center;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="item_no" t-value="0"/>
+                                <t t-foreach="doc.order_id.order_line" t-as="line">
+                                    <t t-if="not line.display_type">
+                                        <t t-set="item_no" t-value="item_no + 1"/>
+                                        <tr>
+                                            <td style="text-align:center;"><span t-esc="item_no"/></td>
+                                            <td><span t-field="line.name"/></td>
+                                            <td style="text-align:center;">
+                                                <span t-esc="'{:,.0f}'.format(line.product_uom_qty).replace(',', '.')"/>
+                                                <span t-field="line.product_uom"/>
+                                            </td>
+                                            <td style="text-align:right;">
+                                                <span t-esc="'Rp. ' + '{:,.0f}'.format(line.price_unit).replace(',', '.') + ',-'"/>
+                                            </td>
+                                            <td style="text-align:right;">
+                                                <span t-esc="'Rp. ' + '{:,.0f}'.format(line.price_subtotal).replace(',', '.')"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+
+                                <tr>
+                                    <td colspan="3" rowspan="4" style="vertical-align:top; font-size:9px;">
+                                        <strong>Alamat transfer :</strong><br/>
+                                        Account Name :<br/>
+                                        <strong t-field="doc.order_id.company_id.name"/><br/><br/>
+                                        Account Number : <strong>464 745 7788</strong><br/>
+                                        Bank <strong>BCA KCP Kertajaya Indah – Surabaya</strong>
+                                    </td>
+                                    <td><strong>Sub Total</strong></td>
+                                    <td style="text-align:right;">
+                                        <strong t-esc="'Rp. ' + '{:,.0f}'.format(doc.order_id.amount_untaxed).replace(',', '.')"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>DP</td>
+                                    <td style="text-align:right;">
+                                        <span t-esc="'Rp. ' + '{:,.0f}'.format(doc.dp_amount).replace(',', '.')"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>PPN <span t-esc="'{:.0f}'.format(doc.tax_id.amount)"/>%</td>
+                                    <td style="text-align:right;">
+                                        <span t-esc="'Rp. ' + '{:,.0f}'.format(doc.dp_tax_amount).replace(',', '.')"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total Pembayaran DP</strong></td>
+                                    <td style="text-align:right;">
+                                        <strong t-esc="'Rp. ' + '{:,.0f}'.format(doc.total_dp_payment).replace(',', '.')"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="row" style="margin-top:60px;">
+                            <div class="col-xs-6">
+                                Hormat Kami,<br/><br/><br/>
+                                <strong t-field="doc.order_id.company_id.name"/>
+                            </div>
+                        </div>
+
+                        <!-- FOOTER: sama seperti Quotation & Invoice -->
+                        <div class="oe_structure"/>
+                        <div style="position: fixed; bottom: 0mm; left: 0; right: 0; width: 100%;">
+                            <div class="row" style="margin-top:30px">
+                                <div class="col-xs-6">
+                                    <span style="color:#272778">
+                                        <strong>Address:</strong>
+                                    </span>
+                                </div>
+                                <div class="col-xs-6;" style="text-align:right;">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                </div>
+                                <div class="col-xs-6;" style="text-align:right;">
+                                    <span style="color:#272778;">
+                                        Phone:(+62)31–35936020
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <span style="color:#272778">
+                                        Jl. Karimun Jawa No. 12-Gubeng, Surabaya, 60281
+                                    </span>
+                                </div>
+                                <div class="col-xs-6;" style="text-align:right;">
+                                    <span style="color:#272778;">
+                                        Whatsapp: (+62) 811-3319889
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <span style="color:#272778">
+                                        Jawa Timur, Indonesia
+                                    </span>
+                                </div>
+                                <div class="col-xs-6;" style="text-align:right;">
+                                    <span style="color:#272778;">
+                                        Whatsapp: (+62) 856-4842-1306
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <span style="color:#272778; text-decoration:underline;">
+                                        <strong>Email: sales@s-print.co.id</strong>
+                                    </span>
+                                </div>
+                                <div class="col-xs-6;" style="text-align:right;">
+                                    <span style="color:#272778; text-decoration:underline;">
+                                        www.s-print.co.id
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-top:20px">
+                                <div class="col-xs-12">
+                                    <div style="border-bottom: 18px solid #ff4404;"/>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </t>
             </t>
-        </t>
-    </template>
+        </template>
 
     <report
         id="action_report_proforma_invoice"

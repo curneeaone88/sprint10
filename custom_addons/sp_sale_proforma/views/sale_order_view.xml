@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <record id="view_order_form_add_proforma_button" model="ir.ui.view">
-        <field name="name">sale.order.form.proforma.button</field>
-        <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="action_open_proforma_wizard" string="Cetak Proforma Invoice"
-                        type="object" class="btn-secondary" icon="fa-print"/>
-            </xpath>
-        </field>
-    </record>
+        <record id="view_order_form_add_proforma_button" model="ir.ui.view">
+            <field name="name">sale.order.form.proforma.button</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//header" position="inside">
+                    <button name="action_open_proforma_wizard" string="Cetak Proforma Invoice"
+                            type="object" class="btn-secondary" icon="fa-print"/>
+                </xpath>
+            </field>
+        </record>
     </data>
 </odoo>
