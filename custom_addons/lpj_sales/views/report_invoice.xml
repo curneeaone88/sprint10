@@ -34,23 +34,23 @@
         <template id="report_invoice_document">
             <t t-call="report.html_container">
                 <t t-set="o" t-value="o.with_context({'lang':o.partner_id.lang})" />
-                <div class="page">
+                <div class="page" style="font-size:10px">
                     <div class="row">
                         <div class="col-xs-6">
-                            <h4 t-field="res_company.name"/>
-                            <span t-field="res_company.street"/>, <span t-field="res_company.street2"/><br/>
-                            <span>Telp: </span><br/>
-                            <span>Email: fac.sprintindonesia@gmail.com</span><br/>
+                            <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' %res_company.logo" style="width: 33%"/>
+                        </div>
+                        <div class="col-xs-6" style="text-align:right;">
+                            <h5 style="color:#272778; font-size=16px"><strong>Print ideas to life</strong></h5>
                         </div>
                     </div>
                     <br/>
                     <!-- Untuk garis horizontal-->
-                    <div class="row zero_min_height">
+                    <!-- <div class="row zero_min_height">
                         <div class="col-xs-12">
                             <div style="border-bottom: 1px solid black;"/>
                         </div>
                     </div>
-                    <br/>
+                    <br/> -->
 
                     <div class="row">
                         <!--Pelanggan kotak sebelah kiri-->
@@ -348,6 +348,69 @@
                             <br/>
                             <br/>
                             .................................
+                        </div>
+                    </div>
+
+                    <div class="oe_structure"/>
+                    <!--Footer-->
+                    <div class="row" style="margin-top:30px">
+                        <div class="col-xs-6">
+                            <span style="color:#272778">
+                                <strong>Address:</strong>
+                            </span>
+                        </div>
+                        <div class="col-xs-6;" style="text-align:right;">
+
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6">
+                        </div>
+                        <div class="col-xs-6;" style="text-align:right;">
+                            <span style="color:#272778;">
+                                Phone:(+62)31–35936020
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <span style="color:#272778">
+                                Jl. Karimun Jawa No. 12-Gubeng, Surabaya, 60281
+                            </span>
+                        </div>
+                        <div class="col-xs-6;" style="text-align:right;">
+                            <span style="color:#272778;">
+                                Whatsapp: (+62) 811-3319889
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <span style="color:#272778">
+                                Jawa Timur, Indonesia
+                            </span>
+                        </div>
+                        <div class="col-xs-6;" style="text-align:right;">
+                            <span style="color:#272778;">
+                                Whatsapp: (+62) 856-4842-1306
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <span style="color:#272778; text-decoration:underline;">
+                                <strong>Email: sales@s-print.co.id</strong>
+                            </span>
+                        </div>
+                        <div class="col-xs-6;" style="text-align:right;">
+                            <span style="color:#272778; text-decoration:underline;">
+                                www.s-print.co.id
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:20px">
+                        <div class="col-xs-12">
+                            <div style="border-bottom: 18px solid #ff4404;"/>
                         </div>
                     </div>
                 </div>

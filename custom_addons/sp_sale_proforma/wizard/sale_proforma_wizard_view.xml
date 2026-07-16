@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+    	<record id="view_sale_proforma_invoice_wizard_form" model="ir.ui.view">
+        	<field name="name">sale.proforma.invoice.wizard.form</field>
+        	<field name="model">sale.proforma.invoice.wizard</field>
+        	<field name="arch" type="xml">
+            	<form string="Cetak Proforma Invoice">
+                	<field name="order_id" invisible="1"/>
+                	<group>
+                    	<group>
+                        	<field name="proforma_no" placeholder="0625/PI-SPRINT/VI/26"/>
+                        	<field name="proforma_date"/>
+                        	<field name="sph_no"/>
+                        	<field name="tanggal_po"/>
+                    	</group>
+                    	<group>
+                        	<field name="dp_amount"/>
+                        	<field name="tax_id"/>
+                    	</group>
+                	</group>
+                	<group string="Preview Perhitungan">
+                    	<group>
+                        	<field name="order_total"/>
+                        	<field name="dp_tax_amount"/>
+                        	<field name="total_dp_payment"/>
+                    	</group>
+                	</group>
+                <footer>
+                    <button name="action_print_proforma" string="Cetak Proforma Invoice"
+                            type="object" class="btn-primary"/>
+                    <button string="Batal" class="btn-default" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    </data>
+</odoo>
+
