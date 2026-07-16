@@ -85,4 +85,3 @@ class SaleProformaInvoiceWizard(models.TransientModel):
         if self.dp_amount <= 0:
             raise UserError(_('Nilai DP harus lebih besar dari 0.'))
         return self.env.ref('sp_sale_proforma.action_report_proforma_invoice').report_action(self)
-

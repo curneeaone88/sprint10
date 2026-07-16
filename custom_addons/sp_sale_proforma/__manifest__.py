@@ -27,4 +27,3 @@ Sub Total, DP, PPN atas DP, dan Total Pembayaran DP.
     'installable': True,
     'application': False,
 }
-

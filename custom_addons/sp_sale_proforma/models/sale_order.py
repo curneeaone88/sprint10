@@ -20,4 +20,3 @@ class SaleOrderProforma(models.Model):
                 'default_order_id': self.id,
             },
         }
-
