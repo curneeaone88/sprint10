@@ -11,7 +11,7 @@
                 </xpath>
 
                 <xpath expr="//button[@name='action_confirm']" position="attributes">
-                    <attribute name="attrs">{'invisible':[('state','not in','sent'}</attribute>
+                    <attribute name="attrs">{'invisible': [('state', 'not in', ['sent'])]}</attribute>
                 </xpath>
 
                 <xpath expr="//field[@name='date_order']" position="attributes">

@@ -57,6 +57,7 @@
         'views/view_config_satuan_adjustment.xml',
         'views/menu.xml',
         'views/wizard_pricing.xml',
+        'views/report_invoice_dp.xml',
 
         # 'views/templates.xml',
     ],

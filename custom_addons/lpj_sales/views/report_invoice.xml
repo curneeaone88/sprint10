@@ -44,16 +44,7 @@
                         </div>
                     </div>
                     <br/>
-                    <!-- Untuk garis horizontal-->
-                    <!-- <div class="row zero_min_height">
-                        <div class="col-xs-12">
-                            <div style="border-bottom: 1px solid black;"/>
-                        </div>
-                    </div>
-                    <br/> -->
-
                     <div class="row">
-                        <!--Pelanggan kotak sebelah kiri-->
                         <div class="col-xs-12">
                             <h5><strong>PELANGGAN</strong></h5>
                         </div>
@@ -98,7 +89,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!--Faktur, kotak sebelah kanan-->
                         <div class="col-xs-6" style="text-alignment:right;">
                             <div style="border:1px solid black; padding:5px">
                                 <div class="row">
@@ -175,9 +165,7 @@
                         </div>
                     </div>
 
-                    <!-- Is there a discount on at least one line? -->
                     <t t-set="display_discount" t-value="any([l.discount for l in o.invoice_line_ids])"/>
-                    <!--Detail Invoices-->
                     <table class="table table-bordered" style="border: 1px solid black;">
                         <thead>
                             <tr>
@@ -220,7 +208,6 @@
                             </tr>
                         </tbody>
                     </table>
-                    <!--Total Amount-->
                     <div class="row">
                         <div class="col-xs-4 pull-right">
                             <table class="table table-condensed">
@@ -244,7 +231,7 @@
                                          <span t-field="o.amount_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                     </td>
                                 </tr>
-                                <tr class="border-black">
+                                <!-- <tr class="border-black">
                                     <td>Bayaran Diterima</td>
                                     <td class="text-right">
                                         <span t-field="o.x_bayaran_diterima" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
@@ -255,12 +242,11 @@
                                     <td class="text-right">
                                         <span t-field="o.residual" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                     </td>
-                                </tr>
+                                </tr> -->
                             </table>
                         </div>
                     </div>
 
-                    <!-- DO NOT REMOVE THIS TABLE. MANDATORY IN SOME COUNTRIES -->
                     <div class="row" t-if="len(o.tax_line_ids) > 0">
                         <div class="col-xs-6">
                             <table class="table table-condensed">
@@ -286,12 +272,9 @@
                         </div>
                     </div>
 
-                    <!--Detail Pembayaran dan Ttd-->
                     <div class="row">
-                        <!--Detail Pembayaran kotak sebelah kiri-->
                         <div class="col-xs-8">
                             <h5><strong>DETAIL PEMBAYARAN</strong></h5>
-                            <!--Detail Pembayaran-->
                             <div style="border:1px solid black; padding:5px">
                                 <div class="row">
                                     <div class="col-xs-4">
@@ -326,7 +309,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <!--Terbilang-->
                             <div style="border:1px solid black; margin-top:10px; padding:5px">
                                 <div class="row">
                                     <div class="col-xs-12">
@@ -337,7 +319,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!--TTD sebelah kanan-->
                         <div class="col-xs-4" style="text-align: center; text-alignment: right">
                             <span style="font-size: 16px">Hormat Kami,</span>
                             <br/>
@@ -352,7 +333,6 @@
                     </div>
 
                     <div class="oe_structure"/>
-                    <!--Footer-->
                     <div class="row" style="margin-top:30px">
                         <div class="col-xs-6">
                             <span style="color:#272778">
@@ -360,7 +340,6 @@
                             </span>
                         </div>
                         <div class="col-xs-6;" style="text-align:right;">
-
                         </div>
                     </div>
                     <div class="row">

@@ -170,6 +170,41 @@ class SalesOrder(models.Model):
         res = super(SalesOrder, self).action_confirm()
         return res
 
+    # ================================================================
+    # CUSTOM: Create Invoice / Down Payment TANPA harus SO confirm dulu
+    # ================================================================
+    @api.multi
+    def action_invoice_create(self, grouped=False, final=False):
+        """
+        Override create invoice bawaan Odoo. Secara default Odoo sebenarnya
+        TIDAK mengecek order.state di method ini (yang membatasi hanya
+        tampilan tombol di form view berdasarkan state). Override ini kita
+        jadikan safety-net + tempat menaruh logic tambahan bila diperlukan,
+        supaya proses invoice tetap jalan walau state SO masih draft/sent.
+        """
+        return super(SalesOrder, self).action_invoice_create(grouped=grouped, final=final)
+
+    @api.multi
+    def action_open_advance_payment_inv(self):
+        """
+        Buka wizard 'Create Invoice' (sale.advance.payment.inv) secara manual
+        dari SO yang statusnya MASIH draft/sent (belum confirm).
+        Tambahkan tombol di form view SO yang memanggil method ini,
+        contoh (letakkan di XML view Anda):
+
+        <button name="action_open_advance_payment_inv" type="object"
+                string="Create Invoice (Belum Confirm)" class="btn-primary"
+                attrs="{'invisible': [('state', 'not in', ('draft', 'sent'))]}"/>
+        """
+        self.ensure_one()
+        action = self.env.ref('sale.action_view_sale_advance_payment_inv').read()[0]
+        action['context'] = {
+            'active_id': self.id,
+            'active_ids': [self.id],
+            'active_model': 'sale.order',
+        }
+        return action
+
     # Uswa -Action klik Toggle purchase request
     @api.multi
     def action_view_purchase(self):
@@ -238,6 +273,76 @@ class SalesOrderLine(models.Model):
                                               "['product', 'Product', 'PRODUCT','Delivery','DELIVERY','Service','SERVICE'])]")
     # x_internal_categ = fields.Many2one('product.category', string="Internal Category",
     #                                        domain="[('sts_bhn_utama.name', 'in', ['product', 'Product', 'PRODUCT','Delivery','DELIVERY','Service','SERVICE'])]")
+
+    # ================================================================
+    # CUSTOM 1: Override qty_to_invoice bawaan Odoo.
+    #
+    # Standar Odoo (addons/sale/models/sale.py -> _get_to_invoice_qty)
+    # SELALU set qty_to_invoice = 0 kalau order.state BUKAN 'sale'/'done'.
+    # Inilah akar sebab kenapa wizard "Invoice the whole sales order"
+    # menghasilkan invoice kosong / "There is no invoiceable line" saat
+    # SO masih Quotation. Override ini menambahkan 'draft' dan 'sent'
+    # supaya SO yang belum confirm tetap bisa dibawa semua item-nya
+    # ke invoice, sama seperti SO yang sudah confirm.
+    # ================================================================
+    @api.depends('order_id.state', 'qty_invoiced', 'qty_delivered', 'product_uom_qty')
+    def _get_to_invoice_qty(self):
+        for line in self:
+            if line.order_id.state in ('sale', 'done', 'draft', 'sent'):
+                # getattr defensif: kalau field invoice_policy entah kenapa
+                # tidak ada di product pada instance ini, anggap saja 'order'
+                invoice_policy = getattr(line.product_id, 'invoice_policy', 'order')
+                if invoice_policy == 'order':
+                    line.qty_to_invoice = line.product_uom_qty - line.qty_invoiced
+                else:
+                    line.qty_to_invoice = line.qty_delivered - line.qty_invoiced
+            else:
+                line.qty_to_invoice = 0
+
+    # ================================================================
+    # CUSTOM 2: Validasi Internal Category wajib diisi, TAPI dikecualikan
+    # untuk baris Down Payment & baris tanpa product (section/note).
+    #
+    # PENTING: baris Down Payment TETAP akan muncul sebagai sale.order.line
+    # baru (produk DP, qty 0) begitu Anda pilih opsi Percentage/Fixed di
+    # wizard "Create Invoice" bawaan Odoo -- ini memang cara kerja standar
+    # Odoo untuk melacak supaya tidak dobel tagih saat invoice pelunasan
+    # dibuat nanti, bukan sesuatu yang bisa/perlu dihindari selama masih
+    # pakai wizard bawaan. Yang penting baris ini dikecualikan dari
+    # validasi kategori, seperti di bawah ini.
+    #
+    # Catatan: field 'is_downpayment' ternyata TIDAK ada di model
+    # sale.order.line pada instance ini, jadi deteksi baris DP dipakai
+    # secara aman (cek keberadaan field dulu) + fallback berdasarkan
+    # nama/kode produk down payment.
+    # ================================================================
+    def _is_down_payment_line(self):
+        self.ensure_one()
+        if not self.product_id:
+            return False
+        # 1) kalau field bawaan is_downpayment ADA di model ini, pakai itu
+        if 'is_downpayment' in self._fields and self.is_downpayment:
+            return True
+        # 2) fallback: deteksi dari nama / kode produk down payment
+        product_name = (self.product_id.name or '').upper()
+        product_code = (self.product_id.default_code or '').upper()
+        if 'DOWN PAYMENT' in product_name or 'DOWNPAYMENT' in product_name or product_code == 'DP':
+            return True
+        return False
+
+    @api.constrains('x_internal_categ', 'product_id')
+    def _check_x_internal_categ_required(self):
+        for line in self:
+            if not line.product_id:
+                # baris section/note, tidak ada product -> skip
+                continue
+            if line._is_down_payment_line():
+                # baris Down Payment otomatis dari wizard -> skip
+                continue
+            if not line.x_internal_categ:
+                raise UserError(_(
+                    "Kolom 'Internal Category' wajib diisi untuk product '%s'."
+                ) % (line.product_id.display_name,))
     is_new_item = fields.Boolean()
     # x_sq = fields.Many2one('x.sales.quotation', string="SQ", required=True)
     x_sq = fields.Many2one('x.sales.quotation', string="SQ")
@@ -582,3 +687,138 @@ class GlobalStatusSO(models.Model):
                     #                             +str(line_obj.x_no_so.id)+ "'limit  1'")
 
         return True
+
+
+# ================================================================
+# CUSTOM: Helper untuk FORM CETAK Invoice DP (Rincian Item SO)
+#
+# Ini HANYA untuk kebutuhan cetak / tampilan laporan. Tidak mengubah
+# baris invoice/DP yang sudah ada (yang tetap standar Odoo, cuma 1
+# baris produk Down Payment). Saat dicetak, laporan akan:
+#   1. Menampilkan SEMUA item asli dari SO terkait (bukan baris DP).
+#   2. Menampilkan ringkasan: Total SO - Nilai DP = Sisa Pembayaran.
+# ================================================================
+class AccountInvoice(models.Model):
+    _inherit = 'account.invoice'
+
+    def x_get_related_sale_order(self):
+        """
+        Cari SO asal dari invoice ini.
+
+        Prioritas 1: cocokkan langsung nomor SO -> field 'origin' di invoice
+        ini (yang diisi Odoo dari nama SO saat invoice dibuat) dengan field
+        'name' di sale.order. Ini paling akurat karena murni pencarian teks,
+        tidak lewat relasi many2many yang ternyata rawan salah/tidak
+        konsisten di instance ini.
+
+        Fallback 1: lewat baris invoice -> baris SO (invoice_lines).
+        Fallback 2: lewat sale.order.invoice_ids (cara paling awal).
+        """
+        self.ensure_one()
+        order = self.env['sale.order']
+
+        if self.origin:
+            order = self.env['sale.order'].search([('name', '=', self.origin)], limit=1)
+
+        if not order:
+            so_lines = self.env['sale.order.line'].search([
+                ('invoice_lines', 'in', self.invoice_line_ids.ids)
+            ])
+            if so_lines:
+                order = so_lines[0].order_id
+
+        if not order:
+            order = self.env['sale.order'].search([('invoice_ids', 'in', self.id)], limit=1)
+
+        return order
+
+    def x_get_print_so_lines(self):
+        """
+        Ambil semua baris item asli di SO (bukan baris produk Down Payment),
+        untuk ditampilkan lengkap di form cetak invoice DP.
+        """
+        self.ensure_one()
+        order = self.x_get_related_sale_order()
+        if not order:
+            return self.env['sale.order.line']
+        return order.order_line.filtered(
+            lambda l: l.product_id and not l._is_down_payment_line()
+        )
+
+    def x_get_print_dp_summary(self):
+        """
+        Return dict ringkasan buat dicetak:
+        - so_total     : total keseluruhan SO (semua item)
+        - dp_amount    : nilai yang ditagih di invoice DP ini
+        - sisa_bayar   : sisa yang masih harus dibayar customer
+        """
+        self.ensure_one()
+        order = self.x_get_related_sale_order()
+        so_total = order.amount_total if order else 0.0
+        dp_amount = self.amount_total
+        sisa_bayar = so_total - dp_amount
+        return {
+            'so_total': so_total,
+            'dp_amount': dp_amount,
+            'sisa_bayar': sisa_bayar,
+            'order': order,
+        }
+
+    def x_is_dp_invoice(self):
+        """
+        True kalau invoice ini adalah invoice Down Payment (dibuat dari
+        wizard Percentage/Fixed), dideteksi dari produk yang dipakai di
+        baris invoice-nya.
+        """
+        self.ensure_one()
+        for line in self.invoice_line_ids:
+            if not line.product_id:
+                continue
+            name = (line.product_id.name or '').upper()
+            code = (line.product_id.default_code or '').upper()
+            if 'DOWN PAYMENT' in name or 'DOWNPAYMENT' in name or code == 'DP':
+                return True
+        return False
+
+    def x_get_print_lines(self):
+        """
+        Data baris item yang SUDAH DINORMALISASI untuk kebutuhan cetak,
+        supaya template QWeb tidak perlu tahu bedanya sale.order.line vs
+        account.invoice.line.
+
+        - Kalau invoice ini invoice DP -> ambil SEMUA item asli dari SO.
+        - Kalau invoice biasa (bukan DP) -> tetap pakai invoice_line_ids
+          seperti biasa (tidak ada perubahan behaviour).
+
+        Return list of dict dengan key:
+        name, description, qty, uom, price_unit, discount, taxes, subtotal
+        """
+        self.ensure_one()
+        result = []
+        if self.x_is_dp_invoice():
+            for l in self.x_get_print_so_lines():
+                taxes = ', '.join([t.name for t in l.tax_id]) if l.tax_id else ''
+                result.append({
+                    'name': l.product_id.name or '',
+                    'description': l.x_description or '',
+                    'qty': l.product_uom_qty,
+                    'uom': l.product_uom.name if l.product_uom else '',
+                    'price_unit': l.price_unit,
+                    'discount': l.discount,
+                    'taxes': taxes,
+                    'subtotal': l.price_subtotal,
+                })
+        else:
+            for l in self.invoice_line_ids:
+                taxes = ', '.join(map(lambda x: (x.description or x.name), l.invoice_line_tax_ids))
+                result.append({
+                    'name': l.name or '',
+                    'description': '',
+                    'qty': l.quantity,
+                    'uom': l.uom_id.name if l.uom_id else '',
+                    'price_unit': l.price_unit,
+                    'discount': l.discount,
+                    'taxes': taxes,
+                    'subtotal': l.price_subtotal,
+                })
+        return result
