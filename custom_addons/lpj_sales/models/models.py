@@ -84,7 +84,29 @@ class SalesOrder(models.Model):
 
             # Looping sale order line
             for row in sale_order_line:
-                if 'DELIVERY' not in str(row.product_id.categ_id.sts_bhn_utama.name).upper():
+                # CUSTOM FIX: skip baris Down Payment -- baris ini tidak
+                # punya due date pengiriman (memang bukan barang yang
+                # dikirim), sehingga sebelumnya bikin error saat insert ke
+                # x_global_status_so ("False" masuk ke kolom timestamp).
+                if row._is_down_payment_line():
+                    continue
+
+                # CUSTOM: hanya baris dengan Internal Category yang
+                # merupakan turunan dari kategori "PRD" yang perlu
+                # di-tracking due date-nya di x_global_status_so.
+                # Ini otomatis mengecualikan produk DP, ONGKIR/jasa
+                # kirim, dan kategori lain di luar PRD -- tanpa perlu
+                # tebak-tebak dari nama produk/kategori.
+                is_prd_categ = False
+                if row.product_id and row.product_id.categ_id:
+                    prd_categ = self.env['product.category'].search([('name', '=', 'PRD')], limit=1)
+                    if prd_categ:
+                        is_prd_categ = bool(self.env['product.category'].search([
+                            ('id', 'child_of', prd_categ.id),
+                            ('id', '=', row.product_id.categ_id.id),
+                        ]))
+
+                if is_prd_categ:
                     x_product = row.product_id
                     id_so = order.id
                     cus_id = order.partner_id.id
@@ -94,6 +116,10 @@ class SalesOrder(models.Model):
                     qty_sisa = qty_order - qty_kirim
                     qty_sisa_convert = "{:,.0f}".format(qty_sisa).replace(",", ".")
                     duedate_kirim = row.x_duedate_kirim
+                    # CUSTOM FIX: kalau due date kosong, pakai NULL (bukan
+                    # string "False") supaya tidak error saat insert ke
+                    # kolom timestamp
+                    duedate_kirim_sql = "NULL" if not duedate_kirim else "'" + str(duedate_kirim) + "'"
                     today = (datetime.now())
                     date_today = today.strftime("%Y-%m-%d")
                     date_today2 = datetime.strptime(date_today, "%Y-%m-%d").date()
@@ -118,7 +144,7 @@ class SalesOrder(models.Model):
                             datetime.now() - relativedelta(hours=float(7))) + "','" + str(
                             res_user.id) + "','" + str(datetime.now() - relativedelta(hours=float(7))) + "','" + str(
                             id_so) + "','" + str(
-                            id_sol) + "','" + str(qty_order) + "','" + str(duedate_kirim) + "','" + str(
+                            id_sol) + "','" + str(qty_order) + "'," + duedate_kirim_sql + ",'" + str(
                             status_confirm) + "', '" + str(x_product.id) + "', 0, 'Confirm SO', '" + str(
                             cus_id) + "');")
 
@@ -161,9 +187,27 @@ class SalesOrder(models.Model):
                     raise UserError(
                         _("Tidak dapat confirm PO/SO, ada product yg masih NEW / Belum ada master product. Silahlkan klik Create Product"))
 
+    # ================================================================
+    # CUSTOM: Validasi setiap SO line wajib punya Tax, KECUALI baris
+    # dengan harga satuan (price_unit) = 0 (misal ongkir gratis, dsb
+    # yang memang boleh tanpa tax).
+    # ================================================================
+    def x_check_lines_tax_required(self):
+        for order in self:
+            for line in order.order_line:
+                if not line.product_id:
+                    # baris section/note, tidak ada product -> skip
+                    continue
+                if line.price_subtotal and not line.tax_id:
+                    raise UserError(_(
+                        "Produk '%s' pada SO %s wajib memiliki Tax "
+                        "(kecuali subtotal = 0)."
+                    ) % (line.product_id.display_name, order.name))
+
     # INHERITE FUNCTION BUTTON CONFIRM SALE ORDER
     @api.multi
     def action_confirm(self):
+        self.x_check_lines_tax_required()
         self.action_confirm_custom()
         self.action_confirm_global_so()
 
@@ -182,6 +226,7 @@ class SalesOrder(models.Model):
         jadikan safety-net + tempat menaruh logic tambahan bila diperlukan,
         supaya proses invoice tetap jalan walau state SO masih draft/sent.
         """
+        self.x_check_lines_tax_required()
         return super(SalesOrder, self).action_invoice_create(grouped=grouped, final=final)
 
     @api.multi
@@ -811,6 +856,24 @@ class AccountInvoice(models.Model):
                 return True
         return False
 
+    def x_get_sorted_invoice_lines(self):
+        """
+        Ambil invoice_line_ids, tapi baris Down Payment (kalau ada,
+        biasanya baris pengurang/negatif di invoice pelunasan) ditaruh
+        PALING BAWAH -- dipakai khusus untuk kebutuhan cetak
+        (report_invoice.xml), tidak mengubah data sebenarnya.
+        """
+        self.ensure_one()
+
+        def is_dp(line):
+            if not line.product_id:
+                return False
+            name = (line.product_id.name or '').upper()
+            code = (line.product_id.default_code or '').upper()
+            return 'DOWN PAYMENT' in name or 'DOWNPAYMENT' in name or code == 'DP'
+
+        return self.invoice_line_ids.sorted(key=lambda l: is_dp(l))
+
     def x_get_print_lines(self):
         """
         Data baris item yang SUDAH DINORMALISASI untuk kebutuhan cetak,
@@ -879,3 +942,20 @@ class AccountInvoice(models.Model):
                     'subtotal': l.price_subtotal,
                 })
         return result
+
+
+# ================================================================
+# CUSTOM: Validasi tax SO line WAJIB dijalankan di SEMUA opsi wizard
+# "Invoice Order" (sale.advance.payment.inv) -- baik "Invoice the whole
+# sales order" maupun Percentage/Fixed (Down Payment). Wizard ini punya
+# satu pintu masuk yang sama untuk semua opsi: create_invoices(), jadi
+# validasi cukup di-hook di situ saja.
+# ================================================================
+class SaleAdvancePaymentInv(models.TransientModel):
+    _inherit = 'sale.advance.payment.inv'
+
+    @api.multi
+    def create_invoices(self):
+        sale_orders = self.env['sale.order'].browse(self._context.get('active_ids', []))
+        sale_orders.x_check_lines_tax_required()
+        return super(SaleAdvancePaymentInv, self).create_invoices()

@@ -225,7 +225,7 @@
                     </div>
                 </div>
 
-                <div class="row" t-if="len(o.tax_line_ids) > 0">
+                <!-- <div class="row" t-if="len(o.tax_line_ids) > 0">
                     <div class="col-xs-6">
                         <table class="table table-condensed">
                             <thead>
@@ -248,7 +248,7 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </div> -->
 
                 <div class="row">
                     <div class="col-xs-8">
@@ -318,7 +318,7 @@
                 </div>
                 <div class="row">
                     <div class="col-xs-6">
-                        <span style="color:#272778; text-decoration:underline;"><strong>Email: sales@s-print.co.id</strong></span>
+                        <span style="color:#272778; text-decoration:underline;"><strong>Email: finance@s-print.co.id</strong></span>
                     </div>
                     <div class="col-xs-6;" style="text-align:right;">
                         <span style="color:#272778; text-decoration:underline;">www.s-print.co.id</span>
