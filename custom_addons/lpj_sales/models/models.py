@@ -840,12 +840,21 @@ class AccountInvoice(models.Model):
                 # 3. l.name -> paling terakhir, karena untuk produk custom
                 #    ("New Item") field ini cuma placeholder generik
                 #    "New Item", bukan deskripsi sebenarnya
-                keterangan = (
-                    l.x_description
-                    or (l.product_id.name if l.product_id else '')
-                    or l.name
-                    or ''
-                )
+                # CUSTOM: kolom Keterangan ikut kolom "Description" di SO
+                # line (field standar 'name'), sama persis seperti yang
+                # tampil di kolom Description pada form SO -- baik untuk
+                # baris New Item maupun produk biasa. Field ini SUDAH
+                # otomatis terisi dengan teks yang benar oleh onchange
+                # 'isi_product' (dari x_sq.item_description untuk New Item,
+                # atau dari nama produk untuk produk biasa), jadi cukup
+                # pakai l.name saja sebagai prioritas utama.
+                # CUSTOM: kolom Keterangan ikut field 'x_description' --
+                # terbukti dari views_so.xml, kolom "Description" di SO
+                # memang di-bind ke field ini (<field name="x_description"/>),
+                # BUKAN ke 'name'. Jadi x_description harus jadi prioritas
+                # utama. Fallback ke l.name / nama produk hanya kalau
+                # x_description-nya kosong.
+                keterangan = l.name or ''
                 result.append({
                     'name': keterangan,
                     'description': '',
