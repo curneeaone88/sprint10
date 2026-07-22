@@ -13,6 +13,28 @@
         menu="True"
     />
 
+    <!-- Paperformat sendiri (berdiri sendiri, tidak nyambung ke file lain)
+         margin tipis supaya konten mepet atas, sama seperti report Sprint -->
+    <record id="paperformat_invoice_dp" model="report.paperformat">
+        <field name="name">European A4 low margin (DP)</field>
+        <field name="default" eval="False" />
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">6</field>
+        <field name="margin_bottom">4</field>
+        <field name="margin_left">6</field>
+        <field name="margin_right">6</field>
+        <field name="header_line" eval="False" />
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="report_account_invoice_dp" model="ir.actions.report.xml">
+        <field name="paperformat_id" ref="paperformat_invoice_dp" />
+    </record>
+
     <template id="report_invoice_dp_document">
         <t t-call="report.html_container">
             <t t-set="o" t-value="o.with_context({'lang':o.partner_id.lang})" />
