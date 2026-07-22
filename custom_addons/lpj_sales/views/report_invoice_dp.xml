@@ -212,7 +212,7 @@
                                 <tr>
                                     <th>Tax</th>
                                     <th class="text-right">Base</th>
-                                    <th class="text-right">Amount Tax</th>
+                                    <th class="text-right">Tax Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -261,10 +261,11 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xs-4" style="text-align: center; text-alignment: right">
-                        <span style="font-size: 16px">Hormat Kami,</span>
-                        <br/><br/><br/><br/><br/><br/><br/>
-                        .................................
+                    <div class="col-xs-4" style="text-align: left;">
+                        <span style="font-size: 16px">Hormat Kami,</span><br/>
+                        <strong style="font-size: 16px">PT. Sukses Printnusa Indonesia</strong>
+                        <br/><br/><br/><br/><br/><br/>
+                        <strong style="font-size: 16px">FAC</strong>
                     </div>
                 </div>
 

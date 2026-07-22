@@ -385,6 +385,28 @@ class SalesOrderLine(models.Model):
             result.product_uom = self.env['product.uom'].search([('name', 'in', ['pcs', 'PCS', 'Pcs'])]).id
             result.x_quo_purchase_m2 = result.x_sq.x_quo_purchase_m2
             result.x_quo_purchase_price_pcs = result.x_sq.x_quo_purchase_price_pcs
+
+        # CUSTOM: baris Down Payment yang otomatis dibuat wizard (nama
+        # bawaan Odoo biasanya "Advance: MM YYYY") diganti jadi
+        # "<Nama Produk> <No SO>", contoh: "Down Payment SO-SP-260525-02669"
+        if result.product_id and result._is_down_payment_line() and result.order_id:
+            try:
+                new_name = "%s %s" % (result.product_id.name, result.order_id.name)
+                result.name = new_name
+            except Exception:
+                pass
+
+        # CUSTOM: fallback auto-isi Internal Category dari master product
+        # kalau baris dibuat lewat jalur yang tidak lewat onchange form
+        # (misal via API/import), supaya tidak kena error constrain wajib
+        # kategori. Tidak berlaku untuk baris Down Payment / produk
+        # 'New Item' (kategorinya memang sengaja diisi manual dulu).
+        if (result.product_id and not result.x_internal_categ
+                and not result.is_new_item
+                and not result._is_down_payment_line()
+                and result.product_id.categ_id):
+            result.x_internal_categ = result.product_id.categ_id.id
+
         return result
 
     @api.multi
@@ -422,6 +444,15 @@ class SalesOrderLine(models.Model):
                 name = row.product_id.name
 
             row.is_new_item = bool(u'NEW ITEM' in name.upper())
+
+            # CUSTOM: auto-isi Internal Category dari master product,
+            # supaya tidak perlu isi manual & tidak kena error constrain
+            # "Internal Category wajib diisi". Khusus produk yang SUDAH
+            # ada di catalog (bukan 'New Item' custom yang kategorinya
+            # justru diisi manual dulu sebelum bikin produk baru lewat
+            # btn_create_product).
+            if row.product_id and not row.is_new_item and row.product_id.categ_id:
+                row.x_internal_categ = row.product_id.categ_id.id
 
     @api.multi
     def btn_create_product(self):
@@ -798,9 +829,26 @@ class AccountInvoice(models.Model):
         if self.x_is_dp_invoice():
             for l in self.x_get_print_so_lines():
                 taxes = ', '.join([t.name for t in l.tax_id]) if l.tax_id else ''
+                # CUSTOM: kolom Keterangan ikut deskripsi baris SO (field
+                # 'name'), sama seperti kolom Keterangan di invoice biasa
+                # (yang narik dari l.name). Fallback ke nama produk kalau
+                # deskripsinya kosong.
+                # CUSTOM: prioritas keterangan:
+                # 1. x_description (Notes) -> deskripsi asli yang diisi user
+                #    di kolom "Description" pada SO (paling akurat)
+                # 2. nama produk
+                # 3. l.name -> paling terakhir, karena untuk produk custom
+                #    ("New Item") field ini cuma placeholder generik
+                #    "New Item", bukan deskripsi sebenarnya
+                keterangan = (
+                    l.x_description
+                    or (l.product_id.name if l.product_id else '')
+                    or l.name
+                    or ''
+                )
                 result.append({
-                    'name': l.product_id.name or '',
-                    'description': l.x_description or '',
+                    'name': keterangan,
+                    'description': '',
                     'qty': l.product_uom_qty,
                     'uom': l.product_uom.name if l.product_uom else '',
                     'price_unit': l.price_unit,

@@ -219,7 +219,7 @@
                                 </tr>
                                 <t t-foreach="o._get_tax_amount_by_group()" t-as="amount_by_group">
                                     <tr>
-                                        <td><span t-esc="amount_by_group[0] if len(o.tax_line_ids) > 1 else (o.tax_line_ids.tax_id.description or o.tax_line_ids.tax_id.name)"/></td>
+                                        <td><strong>Tax </strong><span t-esc="amount_by_group[0] if len(o.tax_line_ids) > 1 else (o.tax_line_ids.tax_id.description or o.tax_line_ids.tax_id.name)"/></td>
                                         <td class="text-right">
                                             <span t-esc="amount_by_group[2]"/>
                                         </td>
@@ -254,7 +254,7 @@
                                     <tr>
                                         <th>Tax</th>
                                         <th class="text-right">Base</th>
-                                        <th class="text-right">Amount</th>
+                                        <th class="text-right">Tax Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -319,17 +319,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xs-4" style="text-align: center; text-alignment: right">
-                            <span style="font-size: 16px">Hormat Kami,</span>
-                            <br/>
-                            <br/>
-                            <br/>
-                            <br/>
-                            <br/>
-                            <br/>
-                            <br/>
-                            .................................
-                        </div>
+                        <div class="col-xs-4" style="text-align: left;">
+                            <span style="font-size: 16px">Hormat Kami,</span><br/>
+                            <strong style="font-size: 16px">PT. Sukses Printnusa Indonesia</strong>
+                            <br/><br/><br/><br/><br/><br/>
+                            <strong style="font-size: 16px">FAC</strong>
+                        </div>  
                     </div>
 
                     <div class="oe_structure"/>
