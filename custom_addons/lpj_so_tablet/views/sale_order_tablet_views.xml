@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Melengkapi POPUP "Create/Open: Order Lines" di form SO (yang muncul di tablet/mobile)
+        dengan semua field custom sale.order.line dari lpj_sales.
+
+        - View EXTENSION ke sale.view_order_form -> tidak ada menu / form baru.
+        - Tampilan desktop (tree editable Order Lines) TIDAK berubah; yang ditambah
+          hanya isi popup form order line.
+        - Field SQ tidak ditambah lagi karena sudah ada di popup (dari lpj_sales).
+    -->
+    <record id="view_order_form_line_popup_lengkap" model="ir.ui.view">
+        <field name="name">sale.order.form.line.popup.lengkap</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+
+            <!-- Field bantu tersembunyi + tombol Create Product (di atas popup) -->
+            <xpath expr="//field[@name='order_line']/form/group[1]" position="before">
+                <field name="is_new_item" invisible="1"/>
+                <field name="x_flag" invisible="1"/>
+                <field name="x_customer_requirement" invisible="1"/>
+                <field name="x_quo_purchase_m2" invisible="1"/>
+                <field name="x_quo_purchase_price_pcs" invisible="1"/>
+                <field name="x_variant_sku_sol" invisible="1"/>
+                <div class="text-right" style="margin-bottom:8px;">
+                    <button name="btn_create_product" type="object" string="Create Product"
+                            class="btn-primary"
+                            attrs="{'invisible': [('is_new_item', '=', False)]}"/>
+                </div>
+            </xpath>
+
+            <!-- Field custom SO line, disisipkan setelah blok utama (Product/SQ/Qty/Harga) -->
+            <xpath expr="//field[@name='order_line']/form/group[1]" position="after">
+                <group>
+                    <group string="Spesifikasi">
+                        <field name="x_bentuk"/>
+                        <label for="x_panjang" string="Ukuran (P x L)"/>
+                        <div class="o_row">
+                            <field name="x_panjang"/>
+                            <span>x</span>
+                            <field name="x_lebar"/>
+                        </div>
+                        <field name="x_bahan"/>
+                        <field name="x_feature"/>
+                        <field name="x_diecut"/>
+                    </group>
+                    <group string="Kategori &amp; Pengiriman">
+                        <field name="x_internal_categ"/>
+                        <field name="x_type_roll"/>
+                        <field name="x_new_product"/>
+                        <field name="x_duedate_kirim"/>
+                    </group>
+                </group>
+                <label for="x_description" string="Notes"/>
+                <field name="x_description"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
