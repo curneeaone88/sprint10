@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Worklist untuk PPIC: daftar baris SO (yang sudah confirmed & masuk
+        kategori PRODUCT) beserta status apakah sudah dibuatkan OK atau
+        belum, persis kolom pada mockup: SO Number, Customer, Product,
+        Qty Order, Sales, Confirmation Date, Duedate, Order Kerja.
+    -->
+
+    <record id="view_sale_order_line_planning_tree" model="ir.ui.view">
+        <field name="name">sale.order.line.planning.ok.tree</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <tree create="false" edit="false" decoration-success="ok_count &gt; 0">
+                <field name="order_id" string="SO Number"/>
+                <field name="order_partner_id" string="Customer" invisible="1"/>
+                <field name="product_id" string="Product"/>
+                <field name="product_uom_qty" string="Qty Order"/>
+                <field name="order_salesperson_id" string="Sales"/>
+                <field name="order_confirm_date" string="Confirmation Date"/>
+                <field name="x_duedate_kirim" string="Duedate"/>
+                <field name="ok_count" invisible="1"/>
+                <field name="ok_ids" widget="many2many_tags" string="Order Kerja"
+                       attrs="{'invisible': [('ok_count', '=', 0)]}"/>
+                <button name="action_create_ok" type="object" string="Create OK"
+                        class="btn-primary"
+                        attrs="{'invisible': [('ok_count', '&gt;', 0)]}"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_sale_order_line_planning_search" model="ir.ui.view">
+        <field name="name">sale.order.line.planning.ok.search</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="order_id" string="SO Number"/>
+                <field name="product_id"/>
+                <field name="order_partner_id" string="Customer"/>
+                <filter string="Belum Dibuatkan OK" name="filter_no_ok" domain="[('ok_count', '=', 0)]"/>
+                <filter string="Sudah Dibuatkan OK" name="filter_has_ok" domain="[('ok_count', '&gt;', 0)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Customer" name="group_customer" context="{'group_by': 'order_partner_id'}"/>
+                    <filter string="Sales" name="group_sales" context="{'group_by': 'order_salesperson_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sale_order_line_planning" model="ir.actions.act_window">
+        <field name="name">Planning Order Kerja</field>
+        <field name="res_model">sale.order.line</field>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="view_sale_order_line_planning_tree"/>
+        <field name="search_view_id" ref="view_sale_order_line_planning_search"/>
+        <field name="domain">[
+            ('order_id.state', 'in', ['sale', 'done']),
+            ('product_id.categ_id.sts_bhn_utama.name', 'in', ['product', 'Product', 'PRODUCT'])
+        ]</field>
+        <field name="context">{'search_default_filter_no_ok': 1}</field>
+        <field name="help">Baris pesanan yang sudah confirmed dan perlu dibuatkan OK (Order Kerja).</field>
+    </record>
+
+</odoo>

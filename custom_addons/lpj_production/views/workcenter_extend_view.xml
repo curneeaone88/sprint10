@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        NOTE: Sengaja TIDAK inherit ke view core mrp.workcenter
+        (mrp.mrp_workcenter_view / mrp_workcenter_tree_view) karena saya
+        tidak bisa memastikan 100% ID view tersebut persis di instal Odoo 10
+        Anda tanpa mengecek langsung (Settings > Technical > Views, model
+        mrp.workcenter, dengan ?debug=1 di URL). Daripada menebak dan
+        berisiko module gagal load, dibuatkan view MANDIRI di bawah ini,
+        khusus untuk menu "Master Mesin" milik modul ini, tidak menyentuh
+        view/menu mrp bawaan sama sekali.
+    -->
+
+    <record id="view_mrp_workcenter_production_form" model="ir.ui.view">
+        <field name="name">mrp.workcenter.form.lpj.production</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="x_code"/>
+                            <field name="x_workcenter_group_id"/>
+                        </group>
+                        <group>
+                            <field name="x_capacity_qty"/>
+                            <field name="x_capacity_uom"/>
+                            <field name="x_default_priority"/>
+                            <field name="x_active_production"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="x_description" placeholder="Deskripsi (opsional)..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mrp_workcenter_production_tree" model="ir.ui.view">
+        <field name="name">mrp.workcenter.tree.lpj.production</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="x_code"/>
+                <field name="x_workcenter_group_id"/>
+                <field name="x_capacity_qty"/>
+                <field name="x_capacity_uom"/>
+                <field name="x_default_priority"/>
+                <field name="x_active_production"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_mrp_workcenter_production" model="ir.actions.act_window">
+        <field name="name">Master Mesin</field>
+        <field name="res_model">mrp.workcenter</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_mrp_workcenter_production_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_mrp_workcenter_production_form')})]"/>
+        <field name="help">Daftar mesin fisik (mrp.workcenter) -- dikaitkan ke Kategori Tahapan. Aktivitas QC diatur di Master Tahapan, bukan per mesin.</field>
+    </record>
+
+</odoo>

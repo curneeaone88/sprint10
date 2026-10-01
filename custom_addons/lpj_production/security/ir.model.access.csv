@@ -1,0 +1,46 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+
+access_lpj_workcenter_group_readonly,lpj.workcenter.group readonly,model_lpj_workcenter_group,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_workcenter_group_user,lpj.workcenter.group user,model_lpj_workcenter_group,lpj_product.group_produksi_user,1,1,0,0
+access_lpj_workcenter_group_manager,lpj.workcenter.group manager,model_lpj_workcenter_group,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_routing_readonly,lpj.routing readonly,model_lpj_routing,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_routing_user,lpj.routing user,model_lpj_routing,lpj_product.group_produksi_user,1,1,0,0
+access_lpj_routing_supervisor,lpj.routing supervisor,model_lpj_routing,lpj_product.group_produksi_supervisor,1,1,1,1
+access_lpj_routing_manager,lpj.routing manager,model_lpj_routing,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_routing_line_readonly,lpj.routing.line readonly,model_lpj_routing_line,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_routing_line_user,lpj.routing.line user,model_lpj_routing_line,lpj_product.group_produksi_user,1,1,0,0
+access_lpj_routing_line_supervisor,lpj.routing.line supervisor,model_lpj_routing_line,lpj_product.group_produksi_supervisor,1,1,1,1
+access_lpj_routing_line_manager,lpj.routing.line manager,model_lpj_routing_line,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_qc_item_template_readonly,lpj.qc.item.template readonly,model_lpj_qc_item_template,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_qc_item_template_user,lpj.qc.item.template user,model_lpj_qc_item_template,lpj_product.group_produksi_user,1,0,0,0
+access_lpj_qc_item_template_manager,lpj.qc.item.template manager,model_lpj_qc_item_template,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_production_ok_readonly,lpj.production.ok readonly,model_lpj_production_ok,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_production_ok_user,lpj.production.ok user,model_lpj_production_ok,lpj_product.group_produksi_user,1,1,1,0
+access_lpj_production_ok_supervisor,lpj.production.ok supervisor,model_lpj_production_ok,lpj_product.group_produksi_supervisor,1,1,1,0
+access_lpj_production_ok_manager,lpj.production.ok manager,model_lpj_production_ok,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_production_ok_line_readonly,lpj.production.ok.line readonly,model_lpj_production_ok_line,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_production_ok_line_user,lpj.production.ok.line user,model_lpj_production_ok_line,lpj_product.group_produksi_user,1,1,1,0
+access_lpj_production_ok_line_supervisor,lpj.production.ok.line supervisor,model_lpj_production_ok_line,lpj_product.group_produksi_supervisor,1,1,1,1
+access_lpj_production_ok_line_manager,lpj.production.ok.line manager,model_lpj_production_ok_line,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_production_qc_checklist_readonly,lpj.production.qc.checklist readonly,model_lpj_production_qc_checklist,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_production_qc_checklist_user,lpj.production.qc.checklist user,model_lpj_production_qc_checklist,lpj_product.group_produksi_user,1,0,1,0
+access_lpj_production_qc_checklist_qc_inspector,lpj.production.qc.checklist qc inspector,model_lpj_production_qc_checklist,group_qc_inspector,1,1,1,0
+access_lpj_production_qc_checklist_supervisor,lpj.production.qc.checklist supervisor,model_lpj_production_qc_checklist,lpj_product.group_produksi_supervisor,1,1,1,1
+access_lpj_production_qc_checklist_manager,lpj.production.qc.checklist manager,model_lpj_production_qc_checklist,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_production_qc_checklist_item_readonly,lpj.production.qc.checklist.item readonly,model_lpj_production_qc_checklist_item,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_production_qc_checklist_item_user,lpj.production.qc.checklist.item user,model_lpj_production_qc_checklist_item,lpj_product.group_produksi_user,1,0,1,0
+access_lpj_production_qc_checklist_item_qc_inspector,lpj.production.qc.checklist.item qc inspector,model_lpj_production_qc_checklist_item,group_qc_inspector,1,1,1,0
+access_lpj_production_qc_checklist_item_supervisor,lpj.production.qc.checklist.item supervisor,model_lpj_production_qc_checklist_item,lpj_product.group_produksi_supervisor,1,1,1,1
+access_lpj_production_qc_checklist_item_manager,lpj.production.qc.checklist.item manager,model_lpj_production_qc_checklist_item,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_production_ok_shortage_wizard_supervisor,lpj.production.ok.shortage.wizard supervisor,model_lpj_production_ok_shortage_wizard,lpj_product.group_produksi_supervisor,1,1,1,1
+access_lpj_production_ok_shortage_wizard_manager,lpj.production.ok.shortage.wizard manager,model_lpj_production_ok_shortage_wizard,lpj_product.group_produksi_manager,1,1,1,1
+
+access_lpj_product_bom_line_all,lpj.product.bom.line all internal users,model_lpj_product_bom_line,base.group_user,1,1,1,1

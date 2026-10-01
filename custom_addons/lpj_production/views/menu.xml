@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_production_root" name="Produksi (OK)" sequence="15"
+              groups="lpj_product.group_produksi_user_readonly"/>
+
+    <menuitem id="menu_production_planning" name="Planning Order Kerja"
+              parent="menu_production_root" action="action_sale_order_line_planning" sequence="5"/>
+
+    <menuitem id="menu_production_ok" name="Order Kerja"
+              parent="menu_production_root" action="action_production_ok" sequence="10"/>
+
+    <menuitem id="menu_production_qc_checklist" name="Checklist QC"
+              parent="menu_production_root" action="action_production_qc_checklist" sequence="20"/>
+
+    <menuitem id="menu_production_config" name="Konfigurasi"
+              parent="menu_production_root" sequence="90"/>
+
+    <menuitem id="menu_production_workcenter_group" name="Master Tahapan Produksi"
+              parent="menu_production_config" action="action_workcenter_group" sequence="10"/>
+
+    <menuitem id="menu_production_workcenter" name="Master Mesin"
+              parent="menu_production_config" action="action_mrp_workcenter_production" sequence="20"/>
+
+    <menuitem id="menu_production_routing" name="Master Routing"
+              parent="menu_production_config" action="action_lpj_routing" sequence="25"/>
+
+    <menuitem id="menu_production_qc_item_template" name="Master Aktivitas QC"
+              parent="menu_production_config" action="action_qc_item_template" sequence="30"/>
+
+    <menuitem id="menu_production_settings" name="Pengaturan Produksi"
+              parent="menu_production_config" action="action_production_settings" sequence="90"
+              groups="lpj_product.group_produksi_manager"/>
+
+</odoo>

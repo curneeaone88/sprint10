@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Field x_diecut_code & x_hotprint_code baru (lihat models/product_extend.py).
+        Ditempel setelah field x_diecut yang sudah ada (ditambahkan oleh
+        lpj_product/views/property_product.xml), supaya berkelompok dengan
+        field spesifikasi produk lain yang sudah ada di form.
+
+        x_default_routing_id juga ditempel di sini, field ini sudah ada
+        sejak awal tapi belum pernah dimasukkan ke view manapun, jadi tidak
+        bisa diisi lewat UI. Ini yang menyebabkan Master Routing di OK
+        selalu kosong (product-nya tidak pernah punya default routing untuk
+        diambil).
+
+        Tab "Layout & Bahan Baku": posisinya sengaja pakai xpath ke
+        notebook[1]/page[1] (bukan position="inside" yang taruh di
+        PALING AKHIR) supaya jadi tab KEDUA, tepat setelah tab pertama
+        (General Information), bukan nyempil di ujung. Cuma muncul kalau
+        x_can_be_production sudah dicentang.
+    -->
+    <record id="view_product_template_form_inherit_production" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.lpj.production</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <field name="x_diecut" position="after">
+                <field name="x_diecut_code"/>
+                <field name="x_hotprint_code"/>
+                <field name="x_default_routing_id"/>
+                <field name="x_can_be_production"/>
+            </field>
+            <xpath expr="//notebook[1]/page[1]" position="after">
+                <page string="Layout &amp; Bahan Baku"
+                      attrs="{'invisible': [('x_can_be_production', '=', False)]}">
+                    <group string="Layout (untuk hitung M2 riil dari Meter Lari)">
+                        <group>
+                            <field name="x_layout_qty_pcs"/>
+                            <field name="x_layout_width"/>
+                            <field name="x_layout_length"/>
+                        </group>
+                    </group>
+                    <group string="Bahan Baku (BOM Sederhana)">
+                        <field name="bom_line_ids" nolabel="1">
+                            <tree editable="bottom">
+                                <field name="sequence" widget="handle"/>
+                                <field name="material_product_id"/>
+                                <field name="qty_per_unit"/>
+                            </tree>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Fallback di level Kategori Produk, dipakai kalau product-nya sendiri
+         belum diisi x_default_routing_id (lihat get_default_routing() di
+         models/product_extend.py). -->
+    <record id="view_product_category_form_inherit_production" model="ir.ui.view">
+        <field name="name">product.category.form.inherit.lpj.production</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="x_default_routing_id"/>
+            </field>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_ok_shortage_wizard_form" model="ir.ui.view">
+        <field name="name">lpj.production.ok.shortage.wizard.form</field>
+        <field name="model">lpj.production.ok.shortage.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="ok_id" invisible="1"/>
+                <div class="alert alert-warning" role="alert">
+                    Qty Production yang divalidasi kurang dari Qty Plan.
+                    Apa yang mau dilakukan untuk sisa kekurangannya?
+                </div>
+                <group>
+                    <field name="qty_plan"/>
+                    <field name="qty_production"/>
+                    <field name="qty_shortage"/>
+                </group>
+                <footer>
+                    <button name="action_create_followup" type="object"
+                            string="Buat OK Susulan" class="oe_highlight"/>
+                    <button name="action_close_so" type="object"
+                            string="Tutup SO (Tidak Ada Susulan)"
+                            confirm="Yakin SO Line ini dianggap selesai meski qty kurang? Tindakan ini akan dicatat di histori OK."/>
+                    <button string="Batal" class="oe_link" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_order_form_inherit_production" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.lpj.production</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <div class="oe_button_box" name="button_box" position="inside">
+                <button name="action_view_ok" type="object"
+                        class="oe_stat_button" icon="fa-industry">
+                    <field name="ok_count" widget="statinfo" string="Order Kerja"/>
+                </button>
+            </div>
+            <!-- Tombol "Create OK" per baris, ditempel setelah field yang sudah
+                 ditambahkan lpj_sales (x_duedate_kirim) di views_so.xml -->
+            <xpath expr="/form/sheet/notebook/page/field[@name='order_line']/tree/field[@name='x_duedate_kirim']"
+                   position="after">
+                <field name="ok_count" invisible="1"/>
+                <button name="action_create_ok" type="object" string="Create OK"
+                        attrs="{'invisible': [('ok_count','&gt;',0)]}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

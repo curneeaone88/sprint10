@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Sengaja view MANDIRI (bukan inherit ke halaman Settings inti Odoo)
+        dengan alasan sama seperti Master Mesin: tidak bisa pastikan 100%
+        struktur view Settings bawaan di instal Odoo 10 Anda tanpa cek
+        langsung. Field pengaturannya sendiri (res.company) tetap benar dan
+        bisa dipakai/di-query dari mana saja, ini cuma soal di layar mana
+        dia gampang diakses.
+    -->
+
+    <record id="view_production_settings_form" model="ir.ui.view">
+        <field name="name">lpj.production.settings.form</field>
+        <field name="model">res.config.settings</field>
+        <field name="arch" type="xml">
+            <form string="Pengaturan Produksi">
+                <group string="Konsumsi Bahan Baku">
+                    <field name="x_allow_negative_stock_production"/>
+                    <div class="text-muted">
+                        Kalau AKTIF: transfer bahan baku saat validasi OK Done tetap
+                        diproses meski stok tidak cukup (bisa minus), dengan reminder
+                        dicatat di chatter OK. Kalau NONAKTIF: validasi diblokir
+                        sampai stok bahan dicukupi.
+                    </div>
+                </group>
+                <footer>
+                    <button string="Simpan" type="object" name="execute" class="oe_highlight"/>
+                    <button string="Batal" class="oe_link" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_production_settings" model="ir.actions.act_window">
+        <field name="name">Pengaturan Produksi</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_production_settings_form"/>
+        <field name="target">inline</field>
+    </record>
+
+</odoo>

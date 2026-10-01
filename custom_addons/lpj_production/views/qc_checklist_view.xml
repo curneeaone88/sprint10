@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_production_qc_checklist_form" model="ir.ui.view">
+        <field name="name">lpj.production.qc.checklist.form</field>
+        <field name="model">lpj.production.qc.checklist</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_confirm_checklist" type="object" string="Konfirmasi Checklist"
+                            class="oe_highlight" states="draft"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="ok_id" readonly="1"/> -
+                            <field name="workcenter_id" readonly="1"/>
+                        </h1>
+                        <field name="workcenter_group_id" readonly="1"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="qc_inspector_id" attrs="{'readonly': [('state','=','done')]}"/>
+                            <field name="date_check" attrs="{'readonly': [('state','=','done')]}"/>
+                        </group>
+                        <group>
+                            <field name="result_summary"/>
+                        </group>
+                    </group>
+                    <field name="item_ids" attrs="{'readonly': [('state','=','done')]}">
+                        <tree editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="name" readonly="1"/>
+                            <field name="result"/>
+                            <field name="note"/>
+                        </tree>
+                    </field>
+                    <group>
+                        <field name="notes" placeholder="Catatan tambahan (opsional)..."
+                               attrs="{'readonly': [('state','=','done')]}"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_production_qc_checklist_tree" model="ir.ui.view">
+        <field name="name">lpj.production.qc.checklist.tree</field>
+        <field name="model">lpj.production.qc.checklist</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="result_summary=='not_ok'" decoration-muted="state=='draft'">
+                <field name="ok_id"/>
+                <field name="workcenter_id"/>
+                <field name="workcenter_group_id"/>
+                <field name="qc_inspector_id"/>
+                <field name="date_check"/>
+                <field name="state"/>
+                <field name="result_summary"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_production_qc_checklist" model="ir.actions.act_window">
+        <field name="name">Checklist QC</field>
+        <field name="res_model">lpj.production.qc.checklist</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+</odoo>

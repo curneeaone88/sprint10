@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================== FORM ==================== -->
+    <record id="view_production_ok_form" model="ir.ui.view">
+        <field name="name">lpj.production.ok.form</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_confirm" type="object" string="Confirm"
+                            class="oe_highlight" states="draft"/>
+                    <button name="action_start" type="object" string="Mulai Produksi"
+                            states="confirmed"/>
+                    <button name="action_request_validation" type="object" string="Ajukan Validasi"
+                            states="in_progress"
+                            confirm="Beberapa baris Routing mungkin belum Done. Yakin ajukan validasi SPV sekarang?"/>
+                    <button name="action_validate_done" type="object" string="Validasi &amp; Selesaikan"
+                            states="to_validate" class="oe_highlight"
+                            groups="lpj_product.group_produksi_supervisor"/>
+                    <button name="action_cancel" type="object" string="Cancel"
+                            states="draft,confirmed,in_progress"/>
+                    <button name="action_set_to_draft" type="object" string="Set to Draft"
+                            states="cancel"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,confirmed,in_progress,to_validate,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_qc_checklists" type="object"
+                                class="oe_stat_button" icon="fa-check-square-o">
+                            <field name="qc_checklist_count" widget="statinfo" string="Checklist QC"/>
+                        </button>
+                        <button name="action_view_followup_ok" type="object"
+                                class="oe_stat_button" icon="fa-share-square-o"
+                                attrs="{'invisible': [('followup_ok_count','=',0)]}">
+                            <field name="followup_ok_count" widget="statinfo" string="OK Susulan"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                        <h3>
+                            <field name="status_terakhir" readonly="1"
+                                   attrs="{'invisible': [('status_terakhir','=',False)]}"/>
+                        </h3>
+                        <field name="parent_ok_id" readonly="1"
+                               attrs="{'invisible': [('parent_ok_id','=',False)]}"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="product_id" readonly="1"/>
+                            <field name="qty_plan"/>
+                            <field name="qty_production"/>
+                            <field name="m2_plan" readonly="1"/>
+                            <field name="m2_production" readonly="1"/>
+                            <field name="total_meter_lari" readonly="1"/>
+                            <field name="waste_bahan" readonly="1"/>
+                            <field name="waste_percentage" readonly="1"/>
+                            <field name="routing_id"/>
+                            <field name="routing_display" readonly="1"/>
+                            <field name="order_type"/>
+                        </group>
+                        <group>
+                            <field name="responsible_id"/>
+                            <field name="plan_ok"/>
+                            <field name="duedate_kirim" readonly="1"/>
+                            <field name="source" readonly="1"/>
+                            <field name="picking_id" readonly="1" attrs="{'invisible': [('picking_id','=',False)]}"/>
+                            <field name="material_picking_id" readonly="1" attrs="{'invisible': [('material_picking_id','=',False)]}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Data Forms">
+                            <div class="alert alert-info" role="alert" style="margin-bottom: 10px;">
+                                Nilai di bawah otomatis terisi dari Master Product saat OK dibuat.
+                                Masih bisa diedit manual di sini kalau job ini memang perlu beda dari master.
+                            </div>
+                            <group>
+                                <group>
+                                    <field name="x_length"/>
+                                    <field name="x_width"/>
+                                    <field name="x_material_id"/>
+                                    <field name="x_satuan"/>
+                                    <field name="x_type_roll_id"/>
+                                </group>
+                                <group>
+                                    <field name="x_diecut_id"/>
+                                    <field name="x_diecut_code"/>
+                                    <field name="x_hotprint_code"/>
+                                    <field name="x_feature_ids" widget="many2many_tags"/>
+                                </group>
+                            </group>
+                            <group string="Layout (dari Master Product, read-only)">
+                                <group>
+                                    <field name="x_layout_qty_pcs"/>
+                                    <field name="x_layout_width"/>
+                                    <field name="x_layout_length"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Routing">
+                            <field name="ok_line_ids">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="workcenter_group_id"/>
+                                    <field name="workcenter_id"/>
+                                    <field name="operator_id"/>
+                                    <field name="plan_date"/>
+                                    <field name="date_start"/>
+                                    <field name="date_end"/>
+                                    <field name="meter_lari"/>
+                                    <field name="qty_pcs"/>
+                                    <field name="notes"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state=='done'"
+                                           decoration-info="state=='in_progress'"/>
+                                    <field name="qc_status" widget="badge"
+                                           decoration-success="qc_status=='ok'"
+                                           decoration-danger="qc_status=='not_ok'"
+                                           decoration-warning="qc_status=='pending'"
+                                           decoration-muted="qc_status=='none'"/>
+                                    <button name="action_open_qc_checklist" type="object"
+                                            string="Isi Checklist" icon="fa-check-square-o"
+                                            attrs="{'invisible': [('qc_status','in',('ok','not_ok'))]}"/>
+                                    <button name="action_start_line" type="object"
+                                            string="Mulai" icon="fa-play"
+                                            attrs="{'invisible': [('state','!=','draft')]}"/>
+                                    <button name="action_done_line" type="object"
+                                            string="Selesai" icon="fa-check"
+                                            attrs="{'invisible': [('state','=','done')]}"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ==================== TREE ==================== -->
+    <record id="view_production_ok_tree" model="ir.ui.view">
+        <field name="name">lpj.production.ok.tree</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <tree decoration-muted="state=='cancel'" decoration-success="state=='done'"
+                  decoration-warning="state=='to_validate'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="qty_plan"/>
+                <field name="routing_display"/>
+                <field name="status_terakhir"/>
+                <field name="duedate_kirim"/>
+                <field name="responsible_id"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ==================== KANBAN (Papan Kanban status produksi) ==================== -->
+    <record id="view_production_ok_kanban" model="ir.ui.view">
+        <field name="name">lpj.production.ok.kanban</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="qty_plan"/>
+                <field name="qty_production"/>
+                <field name="state"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <strong><field name="name"/></strong>
+                                <div><field name="partner_id"/></div>
+                                <div><field name="product_id"/></div>
+                                <div>
+                                    <field name="qty_production"/> / <field name="qty_plan"/> pcs
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ==================== SEARCH ==================== -->
+    <record id="view_production_ok_search" model="ir.ui.view">
+        <field name="name">lpj.production.ok.search</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="sale_order_id"/>
+                <filter string="Aktif" name="active_ok"
+                        domain="[('state','not in',('done','cancel'))]"/>
+                <filter string="Menunggu Validasi SPV" name="to_validate_ok" domain="[('state','=','to_validate')]"/>
+                <filter string="Selesai" name="done_ok" domain="[('state','=','done')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_state" context="{'group_by':'state'}"/>
+                    <filter string="Customer" name="group_partner" context="{'group_by':'partner_id'}"/>
+                    <filter string="Responsible" name="group_responsible" context="{'group_by':'responsible_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_production_ok" model="ir.actions.act_window">
+        <field name="name">Order Kerja</field>
+        <field name="res_model">lpj.production.ok</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="context">{'search_default_active_ok': 1}</field>
+        <field name="help">Order Kerja (OK) -- dibuat per baris pesanan, berjalan melalui tahap Cetak, Finishing, Packing.</field>
+    </record>
+
+</odoo>
