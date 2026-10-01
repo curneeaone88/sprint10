@@ -20,11 +20,12 @@
                 <field name="order_confirm_date" string="Confirmation Date"/>
                 <field name="x_duedate_kirim" string="Duedate"/>
                 <field name="ok_count" invisible="1"/>
+                <field name="x_ok_status" invisible="1"/>
                 <field name="ok_ids" widget="many2many_tags" string="Order Kerja"
                        attrs="{'invisible': [('ok_count', '=', 0)]}"/>
                 <button name="action_create_ok" type="object" string="Create OK"
                         class="btn-primary"
-                        attrs="{'invisible': [('ok_count', '&gt;', 0)]}"/>
+                        attrs="{'invisible': [('x_ok_status', '!=', 'need_ok')]}"/>
             </tree>
         </field>
     </record>
@@ -39,7 +40,8 @@
                 <field name="order_partner_id" string="Customer"/>
                 <filter string="Belum Dibuatkan OK" name="filter_no_ok" domain="[('ok_count', '=', 0)]"/>
                 <filter string="Sudah Dibuatkan OK" name="filter_has_ok" domain="[('ok_count', '&gt;', 0)]"/>
-                <group expand="0" string="Group By">
+                <group expand="1" string="Group By">
+                    <filter string="Status OK" name="group_ok_status" context="{'group_by': 'x_ok_status'}"/>
                     <filter string="Customer" name="group_customer" context="{'group_by': 'order_partner_id'}"/>
                     <filter string="Sales" name="group_sales" context="{'group_by': 'order_salesperson_id'}"/>
                 </group>
@@ -57,7 +59,7 @@
             ('order_id.state', 'in', ['sale', 'done']),
             ('product_id.categ_id.sts_bhn_utama.name', 'in', ['product', 'Product', 'PRODUCT'])
         ]</field>
-        <field name="context">{'search_default_filter_no_ok': 1}</field>
+        <field name="context">{'group_by': ['x_ok_status']}</field>
         <field name="help">Baris pesanan yang sudah confirmed dan perlu dibuatkan OK (Order Kerja).</field>
     </record>
 

@@ -52,10 +52,37 @@ class SaleOrderLineExtendProduction(models.Model):
              "kurang dari Qty Plan (tidak dibuatkan OK susulan). Lihat "
              "lpj.production.ok.shortage.wizard.")
 
+    x_ok_status = fields.Selection([
+        ('need_ok', 'Perlu Dibuatkan OK'),
+        ('has_ok', 'Sudah Ada OK'),
+        ('fully_delivered', 'Sudah Terkirim Penuh (SO Lama)'),
+    ], string='Status OK', compute='_compute_x_ok_status', store=True,
+       help="Dipakai untuk default Group By di menu Planning Order Kerja "
+            "supaya admin PPIC gampang lihat baris SO mana yang masih "
+            "perlu dibuatkan OK:\n"
+            "- Perlu Dibuatkan OK: belum ada OK sama sekali dan Qty "
+            "Delivered masih kurang dari Qty Order.\n"
+            "- Sudah Ada OK: baris ini sudah punya minimal 1 OK.\n"
+            "- Sudah Terkirim Penuh (SO Lama): Qty Delivered sudah >= Qty "
+            "Order tapi belum pernah dibuatkan OK -- biasanya SO lama dari "
+            "sebelum modul ini dipakai, sengaja dipisah supaya tombol "
+            "'Create OK' tidak ikut muncul untuk baris ini.")
+
     @api.multi
     def _compute_ok_count(self):
         for rec in self:
             rec.ok_count = len(rec.ok_ids)
+
+    @api.multi
+    @api.depends('ok_ids', 'qty_delivered', 'product_uom_qty')
+    def _compute_x_ok_status(self):
+        for rec in self:
+            if rec.ok_ids:
+                rec.x_ok_status = 'has_ok'
+            elif rec.product_uom_qty and rec.qty_delivered >= rec.product_uom_qty:
+                rec.x_ok_status = 'fully_delivered'
+            else:
+                rec.x_ok_status = 'need_ok'
 
     @api.multi
     def action_create_ok(self):
