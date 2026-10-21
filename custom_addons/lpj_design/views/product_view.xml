@@ -15,8 +15,8 @@
         Tab "Layout & Bahan Baku": posisinya sengaja pakai xpath ke
         notebook[1]/page[1] (bukan position="inside" yang taruh di
         PALING AKHIR) supaya jadi tab KEDUA, tepat setelah tab pertama
-        (General Information), bukan nyempil di ujung. Cuma muncul kalau
-        x_can_be_production sudah dicentang.
+        (General Information), bukan nyempil di ujung. Selalu tampil supaya
+        tim Desain bisa mengisinya; Bisa Produksi diset lewat tombol Tandai Data Lengkap.
     -->
     <record id="view_product_template_form_inherit_production" model="ir.ui.view">
         <field name="name">product.template.form.inherit.lpj.production</field>
@@ -27,11 +27,21 @@
                 <field name="x_diecut_code"/>
                 <field name="x_hotprint_code"/>
                 <field name="x_default_routing_id"/>
-                <field name="x_can_be_production"/>
             </field>
             <xpath expr="//notebook[1]/page[1]" position="after">
-                <page string="Layout &amp; Bahan Baku"
-                      attrs="{'invisible': [('x_can_be_production', '=', False)]}">
+                <page string="Layout &amp; Bahan Baku">
+                    <group string="Kelengkapan Data Desain">
+                        <field name="x_can_be_production" readonly="1"/>
+                        <field name="x_design_missing"/>
+                        <div>
+                            <button name="action_mark_design_complete" type="object"
+                                    string="Tandai Data Lengkap" class="oe_highlight"
+                                    attrs="{'invisible': [('x_can_be_production','=',True)]}"/>
+                            <button name="action_reopen_design" type="object"
+                                    string="Buka Kembali (Revisi)"
+                                    attrs="{'invisible': [('x_can_be_production','=',False)]}"/>
+                        </div>
+                    </group>
                     <group string="Layout (untuk hitung M2 riil dari Meter Lari)">
                         <group>
                             <field name="x_layout_qty_pcs"/>
@@ -45,6 +55,7 @@
                                 <field name="sequence" widget="handle"/>
                                 <field name="material_product_id"/>
                                 <field name="qty_per_unit"/>
+                                <field name="material_uom_id" string="Satuan"/>
                             </tree>
                         </field>
                     </group>

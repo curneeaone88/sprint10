@@ -12,9 +12,14 @@
                             class="oe_highlight" states="draft"/>
                     <button name="action_start" type="object" string="Mulai Produksi"
                             states="confirmed"/>
+                    <!-- Sengaja TIDAK pakai states="in_progress" saja, karena tombol
+                         ini baru boleh kelihatan setelah SEMUA baris Routing Done
+                         (all_lines_done), bukan bisa diklik kapan saja selama
+                         status In Progress. Lihat all_lines_done di
+                         models/production_ok.py. -->
                     <button name="action_request_validation" type="object" string="Ajukan Validasi"
-                            states="in_progress"
-                            confirm="Beberapa baris Routing mungkin belum Done. Yakin ajukan validasi SPV sekarang?"/>
+                            class="oe_highlight"
+                            attrs="{'invisible': ['|', ('state','!=','in_progress'), ('all_lines_done','=',False)]}"/>
                     <button name="action_validate_done" type="object" string="Validasi &amp; Selesaikan"
                             states="to_validate" class="oe_highlight"
                             groups="lpj_product.group_produksi_supervisor"/>
@@ -22,6 +27,7 @@
                             states="draft,confirmed,in_progress"/>
                     <button name="action_set_to_draft" type="object" string="Set to Draft"
                             states="cancel"/>
+                    <field name="all_lines_done" invisible="1"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,confirmed,in_progress,to_validate,done"/>
                 </header>
@@ -72,6 +78,147 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="Routing">
+                            <!--
+                                mode="tree,kanban": di desktop tampil tabel (tree), di layar
+                                kecil (HP/tablet) Odoo otomatis pakai kartu (kanban) di bawah
+                                supaya tidak perlu scroll horizontal dan tombolnya besar.
+                                Tahapan harus berurutan, tombol Mulai cuma muncul untuk
+                                tahap yang gilirannya (can_start).
+                            -->
+                            <field name="ok_line_ids" mode="tree,kanban">
+                                <form>
+                                    <group>
+                                        <field name="workcenter_group_id" readonly="1"/>
+                                        <field name="workcenter_id"/>
+                                        <field name="operator_id"/>
+                                        <field name="plan_date"/>
+                                        <field name="meter_lari"/>
+                                        <field name="qty_pcs"/>
+                                        <field name="date_start" readonly="1"/>
+                                        <field name="date_end" readonly="1"/>
+                                        <field name="notes"/>
+                                    </group>
+                                </form>
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="workcenter_group_id"/>
+                                    <field name="workcenter_id"/>
+                                    <field name="operator_id"/>
+                                    <field name="plan_date"/>
+                                    <field name="date_start"/>
+                                    <field name="date_end"/>
+                                    <field name="meter_lari"/>
+                                    <field name="qty_pcs"/>
+                                    <field name="notes"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state=='done'"
+                                           decoration-info="state=='in_progress'"/>
+                                    <field name="qc_status" widget="badge"
+                                           decoration-success="qc_status=='ok'"
+                                           decoration-danger="qc_status=='not_ok'"
+                                           decoration-warning="qc_status=='pending'"
+                                           decoration-muted="qc_status=='none'"/>
+                                    <field name="qc_required" invisible="1"/>
+                                    <field name="can_start" invisible="1"/>
+                                    <!--
+                                        Tombol sengaja dibuat BERGANTIAN muncul (cuma satu
+                                        yang kelihatan per saat), bukan tiga-tiganya sekaligus,
+                                        supaya urutan kerja operator jelas: Mulai -> (Isi
+                                        Checklist, kalau tahap ini ada QC-nya) -> Selesai.
+
+                                        qc_status TIDAK CUKUP sendirian untuk menentukan ini,
+                                        karena nilainya baru berubah dari 'none' SETELAH checklist-nya
+                                        dibuat, dan checklist baru dibuat lazily saat tombol
+                                        'Isi Checklist' diklik (lihat action_open_qc_checklist).
+                                        Jadi dipakai field qc_required (dari Master Kategori Proses,
+                                        sudah ada sejak baris dibuat) untuk tahu apakah tahap
+                                        ini MEMANG punya aktivitas QC atau tidak.
+
+                                        - Mulai: cuma saat masih draft (belum dikerjakan).
+                                        - Isi Checklist: cuma saat SUDAH dimulai (in_progress)
+                                          DAN tahap ini butuh QC DAN belum sampai hasil akhir
+                                          (qc_status belum ok/not_ok).
+                                        - Selesai: cuma saat SUDAH dimulai (in_progress) DAN
+                                          TIDAK sedang menunggu QC (tahap ini tidak butuh QC
+                                          sama sekali, ATAU sudah ada hasil ok/not_ok).
+                                    -->
+                                    <button name="action_start_line" type="object"
+                                            string="Mulai" icon="fa-play"
+                                            attrs="{'invisible': ['|', ('state','!=','draft'), ('can_start','=',False)]}"/>
+                                    <button name="action_open_qc_checklist" type="object"
+                                            string="Isi Checklist" icon="fa-check-square-o"
+                                            attrs="{'invisible': ['|', '|', ('state','!=','in_progress'), ('qc_required','=',False), ('qc_status','in',('ok','not_ok'))]}"/>
+                                    <button name="action_done_line" type="object"
+                                            string="Selesai" icon="fa-check"
+                                            attrs="{'invisible': ['|', ('state','!=','in_progress'), '&amp;', ('qc_required','=',True), ('qc_status','not in',('ok','not_ok'))]}"/>
+                                </tree>
+                                <kanban>
+                                    <field name="sequence"/>
+                                    <field name="workcenter_group_id"/>
+                                    <field name="workcenter_id"/>
+                                    <field name="operator_id"/>
+                                    <field name="meter_lari"/>
+                                    <field name="qty_pcs"/>
+                                    <field name="state"/>
+                                    <field name="qc_status"/>
+                                    <field name="qc_required"/>
+                                    <field name="can_start"/>
+                                    <templates>
+                                        <t t-name="kanban-box">
+                                            <div class="oe_kanban_global_click" style="padding: 10px 12px;">
+                                                <div style="font-size: 16px; font-weight: 700;">
+                                                    <field name="workcenter_group_id"/>
+                                                </div>
+                                                <div t-if="record.workcenter_id.raw_value" style="font-size: 13px; color: #555;">
+                                                    <i class="fa fa-cogs"/> <field name="workcenter_id"/>
+                                                </div>
+                                                <div t-if="record.operator_id.raw_value" style="font-size: 13px; color: #555;">
+                                                    <i class="fa fa-user"/> <field name="operator_id"/>
+                                                </div>
+                                                <div style="font-size: 13px; color: #555;">
+                                                    <span t-if="record.meter_lari.raw_value"><field name="meter_lari"/> m lari</span>
+                                                    <span t-if="record.qty_pcs.raw_value"> <field name="qty_pcs"/> pcs</span>
+                                                </div>
+                                                <div style="margin: 6px 0;">
+                                                    <span class="label label-default" t-if="record.state.raw_value == 'draft'"><field name="state"/></span>
+                                                    <span class="label label-info" t-if="record.state.raw_value == 'in_progress'"><field name="state"/></span>
+                                                    <span class="label label-success" t-if="record.state.raw_value == 'done'"><field name="state"/></span>
+                                                    <span class="label label-warning" t-if="record.qc_required.raw_value &amp;&amp; record.qc_status.raw_value != 'ok' &amp;&amp; record.qc_status.raw_value != 'not_ok'">QC belum</span>
+                                                    <span class="label label-success" t-if="record.qc_status.raw_value == 'ok'">QC OK</span>
+                                                    <span class="label label-danger" t-if="record.qc_status.raw_value == 'not_ok'">QC Not OK</span>
+                                                </div>
+                                                <div t-if="record.state.raw_value == 'in_progress'" style="margin-bottom: 6px;">
+                                                    <button name="action_open_result_form" type="object" class="btn btn-block btn-lg btn-default">
+                                                        <i class="fa fa-pencil"/> Input Hasil (Meter Lari / Qty Pcs)
+                                                    </button>
+                                                </div>
+                                                <div t-if="record.state.raw_value == 'draft' &amp;&amp; record.can_start.raw_value">
+                                                    <button name="action_start_line" type="object" class="btn btn-block btn-lg btn-primary">
+                                                        <i class="fa fa-play"/> Mulai
+                                                    </button>
+                                                </div>
+                                                <div t-if="record.state.raw_value == 'in_progress' &amp;&amp; record.qc_required.raw_value &amp;&amp; record.qc_status.raw_value != 'ok' &amp;&amp; record.qc_status.raw_value != 'not_ok'">
+                                                    <button name="action_open_qc_checklist" type="object" class="btn btn-block btn-lg btn-warning">
+                                                        <i class="fa fa-check-square-o"/> Isi Checklist QC
+                                                    </button>
+                                                </div>
+                                                <div t-if="record.state.raw_value == 'in_progress' &amp;&amp; !record.qc_required.raw_value">
+                                                    <button name="action_done_line" type="object" class="btn btn-block btn-lg btn-success">
+                                                        <i class="fa fa-check"/> Selesai
+                                                    </button>
+                                                </div>
+                                                <div t-if="record.state.raw_value == 'in_progress' &amp;&amp; record.qc_required.raw_value &amp;&amp; (record.qc_status.raw_value == 'ok' || record.qc_status.raw_value == 'not_ok')">
+                                                    <button name="action_done_line" type="object" class="btn btn-block btn-lg btn-success">
+                                                        <i class="fa fa-check"/> Selesai
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </templates>
+                                </kanban>
+                            </field>
+                        </page>
                         <page string="Data Forms">
                             <div class="alert alert-info" role="alert" style="margin-bottom: 10px;">
                                 Nilai di bawah otomatis terisi dari Master Product saat OK dibuat.
@@ -100,44 +247,34 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Routing">
-                            <field name="ok_line_ids">
-                                <tree editable="bottom">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="workcenter_group_id"/>
-                                    <field name="workcenter_id"/>
-                                    <field name="operator_id"/>
-                                    <field name="plan_date"/>
-                                    <field name="date_start"/>
-                                    <field name="date_end"/>
-                                    <field name="meter_lari"/>
-                                    <field name="qty_pcs"/>
-                                    <field name="notes"/>
-                                    <field name="state" widget="badge"
-                                           decoration-success="state=='done'"
-                                           decoration-info="state=='in_progress'"/>
-                                    <field name="qc_status" widget="badge"
-                                           decoration-success="qc_status=='ok'"
-                                           decoration-danger="qc_status=='not_ok'"
-                                           decoration-warning="qc_status=='pending'"
-                                           decoration-muted="qc_status=='none'"/>
-                                    <button name="action_open_qc_checklist" type="object"
-                                            string="Isi Checklist" icon="fa-check-square-o"
-                                            attrs="{'invisible': [('qc_status','in',('ok','not_ok'))]}"/>
-                                    <button name="action_start_line" type="object"
-                                            string="Mulai" icon="fa-play"
-                                            attrs="{'invisible': [('state','!=','draft')]}"/>
-                                    <button name="action_done_line" type="object"
-                                            string="Selesai" icon="fa-check"
-                                            attrs="{'invisible': [('state','=','done')]}"/>
-                                </tree>
-                            </field>
-                        </page>
                         <page string="Notes">
                             <field name="notes"/>
                         </page>
                     </notebook>
                 </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Form popup input hasil per tahap, dibuka dari tombol Input Hasil di kartu mobile. -->
+    <record id="view_production_ok_line_result_form" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.result.form</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="workcenter_group_id" readonly="1"/>
+                    <field name="input_mode" invisible="1"/>
+                    <field name="ok_id" invisible="1"/>
+                    <field name="meter_lari"
+                           attrs="{'invisible': [('input_mode','=','qty_pcs')]}"/>
+                    <field name="qty_pcs"/>
+                    <field name="notes"/>
+                </group>
+                <footer>
+                    <button string="Simpan" name="action_save_result" type="object" class="btn-primary btn-lg"/>
+                    <button string="Batal" special="cancel" class="btn-lg"/>
+                </footer>
             </form>
         </field>
     </record>

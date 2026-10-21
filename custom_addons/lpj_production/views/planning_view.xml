@@ -21,6 +21,7 @@
                 <field name="x_duedate_kirim" string="Duedate"/>
                 <field name="ok_count" invisible="1"/>
                 <field name="x_ok_status" invisible="1"/>
+                <field name="x_design_status" string="Status Desain"/>
                 <field name="ok_ids" widget="many2many_tags" string="Order Kerja"
                        attrs="{'invisible': [('ok_count', '=', 0)]}"/>
                 <button name="action_create_ok" type="object" string="Create OK"
@@ -42,6 +43,7 @@
                 <filter string="Sudah Dibuatkan OK" name="filter_has_ok" domain="[('ok_count', '&gt;', 0)]"/>
                 <group expand="1" string="Group By">
                     <filter string="Status OK" name="group_ok_status" context="{'group_by': 'x_ok_status'}"/>
+                    <filter string="Status Desain" name="group_design_status" context="{'group_by': 'x_design_status'}"/>
                     <filter string="Customer" name="group_customer" context="{'group_by': 'order_partner_id'}"/>
                     <filter string="Sales" name="group_sales" context="{'group_by': 'order_salesperson_id'}"/>
                 </group>
@@ -57,6 +59,7 @@
         <field name="search_view_id" ref="view_sale_order_line_planning_search"/>
         <field name="domain">[
             ('order_id.state', 'in', ['sale', 'done']),
+            ('x_design_status', 'in', ['outstanding', 'in_progress', 'done']),
             ('product_id.categ_id.sts_bhn_utama.name', 'in', ['product', 'Product', 'PRODUCT'])
         ]</field>
         <field name="context">{'group_by': ['x_ok_status']}</field>

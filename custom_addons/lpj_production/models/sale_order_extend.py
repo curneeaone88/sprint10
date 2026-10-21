@@ -56,6 +56,8 @@ class SaleOrderLineExtendProduction(models.Model):
         ('need_ok', 'Perlu Dibuatkan OK'),
         ('has_ok', 'Sudah Ada OK'),
         ('fully_delivered', 'Sudah Terkirim Penuh (SO Lama)'),
+        ('no_sq', 'Tanpa SQ (Tidak Perlu OK)'),
+        ('waiting_design', 'Menunggu Desain'),
     ], string='Status OK', compute='_compute_x_ok_status', store=True,
        help="Dipakai untuk default Group By di menu Planning Order Kerja "
             "supaya admin PPIC gampang lihat baris SO mana yang masih "
@@ -74,13 +76,17 @@ class SaleOrderLineExtendProduction(models.Model):
             rec.ok_count = len(rec.ok_ids)
 
     @api.multi
-    @api.depends('ok_ids', 'qty_delivered', 'product_uom_qty')
+    @api.depends('ok_ids', 'qty_delivered', 'product_uom_qty', 'x_design_status')
     def _compute_x_ok_status(self):
         for rec in self:
             if rec.ok_ids:
                 rec.x_ok_status = 'has_ok'
             elif rec.product_uom_qty and rec.qty_delivered >= rec.product_uom_qty:
                 rec.x_ok_status = 'fully_delivered'
+            elif not rec.x_design_status or rec.x_design_status == 'na':
+                rec.x_ok_status = 'no_sq'
+            elif rec.x_design_status != 'done':
+                rec.x_ok_status = 'waiting_design'
             else:
                 rec.x_ok_status = 'need_ok'
 
@@ -95,10 +101,22 @@ class SaleOrderLineExtendProduction(models.Model):
         self.ensure_one()
         product_tmpl = self.product_id.product_tmpl_id
 
+        if not self.x_sq or self.x_design_status == 'na':
+            raise UserError(_(
+                "Item '%s' tidak punya SQ, jadi tidak perlu dibuatkan OK."
+            ) % product_tmpl.display_name)
+        if self.x_design_status != 'done':
+            raise UserError(_(
+                "Item '%s' masih menunggu tim Desain melengkapi data produk "
+                "(status Desain: %s). OK baru bisa dibuat setelah Desain "
+                "menandai selesai."
+            ) % (product_tmpl.display_name,
+                 dict(self._fields['x_design_status'].selection).get(self.x_design_status)))
+
         if not product_tmpl.x_can_be_production:
             raise UserError(_(
-                "Produk '%s' belum ditandai 'Bisa Produksi'. Data Routing, "
-                "Layout, dan Bahan Baku (BOM) untuk produk ini kemungkinan "
+                "Produk '%s' belum ditandai 'Bisa Produksi'. Data Routing dan "
+                "Layout untuk produk ini kemungkinan "
                 "belum lengkap. Hubungi tim Desain untuk melengkapi data "
                 "produksi produk ini sebelum OK bisa dibuat."
             ) % product_tmpl.display_name)

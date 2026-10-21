@@ -12,14 +12,6 @@
                     <field name="ok_count" widget="statinfo" string="Order Kerja"/>
                 </button>
             </div>
-            <!-- Tombol "Create OK" per baris, ditempel setelah field yang sudah
-                 ditambahkan lpj_sales (x_duedate_kirim) di views_so.xml -->
-            <xpath expr="/form/sheet/notebook/page/field[@name='order_line']/tree/field[@name='x_duedate_kirim']"
-                   position="after">
-                <field name="ok_count" invisible="1"/>
-                <button name="action_create_ok" type="object" string="Create OK"
-                        attrs="{'invisible': [('ok_count','&gt;',0)]}"/>
-            </xpath>
         </field>
     </record>
 

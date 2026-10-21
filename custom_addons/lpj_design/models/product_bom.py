@@ -31,9 +31,22 @@ class ProductBomLine(models.Model):
     sequence = fields.Integer(string='Urutan', default=10)
     material_product_id = fields.Many2one(
         'product.product', string='Bahan Baku', required=True)
+    material_uom_id = fields.Many2one(
+        'product.uom', string='Satuan', related='material_product_id.uom_id',
+        readonly=True,
+        help="Ikut satuan stok (UoM) dari Master Product bahan baku ini -- "
+             "ditampilkan supaya jelas angka 'Qty per Layout' itu dalam "
+             "satuan apa tanpa perlu buka Master Product bahan bakunya "
+             "satu-satu. Kalau satuannya Meter/M2, berarti kertas/bahan "
+             "lembaran. Kalau Gram/Kg, berarti tinta/bahan kimia. Kalau "
+             "Pcs, berarti aksesoris/hardware.")
     qty_per_unit = fields.Float(
         string='Qty per Layout', required=True, digits=(16, 4),
-        help="Qty bahan ini yang dipakai untuk MEMPRODUKSI 1 LAYOUT. "
-             "Total qty yang keluar dari stok saat OK selesai = angka ini "
-             "x jumlah layout (Total Meter Lari OK / Panjang per Layout "
-             "produk).")
+        help="Qty bahan ini (DALAM SATUAN/UoM Master Product bahan baku "
+             "tersebut, lihat kolom Satuan) yang dipakai untuk MEMPRODUKSI "
+             "1 LAYOUT. Contoh: kertas UoM Meter -> isi Panjang per Layout "
+             "produk ini (karena 1 layout = 1 potongan kertas sepanjang "
+             "itu); tinta UoM Gram -> isi berapa gram tinta habis mencetak "
+             "1 layout. Total qty yang keluar dari stok saat OK selesai = "
+             "angka ini x jumlah layout (Total Meter Lari OK / Panjang per "
+             "Layout produk).")

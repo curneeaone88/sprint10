@@ -36,6 +36,13 @@
                         <field name="x_input_mode"/>
                     </group>
                     <notebook>
+                        <page string="Mesin">
+                            <p class="text-muted">
+                                Mesin yang bisa mengerjakan kategori proses ini. Satu mesin boleh
+                                ada di banyak kategori.
+                            </p>
+                            <field name="workcenter_ids" widget="many2many_tags"/>
+                        </page>
                         <page string="Aktivitas QC">
                             <p class="text-muted">
                                 Aktivitas ini berlaku untuk SEMUA mesin dengan kategori ini.
@@ -54,10 +61,10 @@
     </record>
 
     <record id="action_workcenter_group" model="ir.actions.act_window">
-        <field name="name">Master Tahapan Produksi</field>
+        <field name="name">Master Kategori Proses</field>
         <field name="res_model">lpj.workcenter.group</field>
         <field name="view_mode">tree,form</field>
-        <field name="help">Kategori tahapan (Cetak, Slitter, Laminasi, dst.) -- dipasang di Master Mesin sebagai filter saat PPIC memilih mesin di OK, dan jadi tempat mengatur Aktivitas QC yang berlaku untuk semua mesin di kategori itu.</field>
+        <field name="help">Kategori proses (Cetak, Slitter, Laminasi, dst.) -- dipasang di Master Mesin sebagai filter saat PPIC memilih mesin di OK, dan jadi tempat mengatur Aktivitas QC yang berlaku untuk semua mesin di kategori itu.</field>
     </record>
 
 </odoo>

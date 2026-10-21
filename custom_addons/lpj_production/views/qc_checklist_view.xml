@@ -28,17 +28,83 @@
                             <field name="result_summary"/>
                         </group>
                     </group>
+                    <!--
+                        Kanban (BUKAN tree) sengaja dipakai untuk item_ids,
+                        checklist ini yang paling sering diisi langsung di
+                        lantai produksi pakai tablet/HP. Dropdown pilihan di
+                        dalam baris tree kecil itu menyusahkan di layar
+                        sentuh; 3 tombol besar (OK/Not OK/N/A) yang langsung
+                        set hasil dengan 1 tap jauh lebih enak dipakai,
+                        lihat action_set_ok/action_set_not_ok/action_set_none
+                        di models/qc_checklist.py. Tap di luar tombol (judul
+                        aktivitas) buka form kecil kalau perlu isi Catatan.
+                    -->
                     <field name="item_ids" attrs="{'readonly': [('state','=','done')]}">
-                        <tree editable="bottom">
-                            <field name="sequence" widget="handle"/>
-                            <field name="name" readonly="1"/>
+                        <kanban class="o_kanban_mobile">
+                            <field name="sequence"/>
+                            <field name="name"/>
                             <field name="result"/>
                             <field name="note"/>
-                        </tree>
+                            <field name="checklist_state"/>
+                            <templates>
+                                <t t-name="kanban-box">
+                                    <div class="oe_kanban_card oe_kanban_global_click"
+                                         style="padding: 12px 14px;">
+                                        <div style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">
+                                            <field name="name"/>
+                                        </div>
+                                        <div t-if="record.checklist_state.raw_value != 'done'" class="row">
+                                            <div class="col-xs-4">
+                                                <button name="action_set_ok" type="object" class="btn btn-block btn-lg btn-success" t-if="record.result.raw_value == 'ok'"><i class="fa fa-check"/><br/>OK</button>
+                                                <button name="action_set_ok" type="object" class="btn btn-block btn-lg btn-default" t-if="record.result.raw_value != 'ok'"><i class="fa fa-check"/><br/>OK</button>
+                                            </div>
+                                            <div class="col-xs-4">
+                                                <button name="action_set_not_ok" type="object" class="btn btn-block btn-lg btn-danger" t-if="record.result.raw_value == 'not_ok'"><i class="fa fa-times"/><br/>Not OK</button>
+                                                <button name="action_set_not_ok" type="object" class="btn btn-block btn-lg btn-default" t-if="record.result.raw_value != 'not_ok'"><i class="fa fa-times"/><br/>Not OK</button>
+                                            </div>
+                                            <div class="col-xs-4">
+                                                <button name="action_set_none" type="object" class="btn btn-block btn-lg btn-warning" t-if="record.result.raw_value == 'none'"><i class="fa fa-ban"/><br/>N/A</button>
+                                                <button name="action_set_none" type="object" class="btn btn-block btn-lg btn-default" t-if="record.result.raw_value != 'none'"><i class="fa fa-ban"/><br/>N/A</button>
+                                            </div>
+                                        </div>
+                                        <div t-if="record.checklist_state.raw_value == 'done'">
+                                            <span class="label label-success" t-if="record.result.raw_value == 'ok'"><field name="result"/></span>
+                                            <span class="label label-danger" t-if="record.result.raw_value == 'not_ok'"><field name="result"/></span>
+                                            <span class="label label-warning" t-if="record.result.raw_value == 'none'"><field name="result"/></span>
+                                        </div>
+                                        <div t-if="record.note.raw_value" style="margin-top: 6px; font-size: 12px; color: #777;">
+                                            <i class="fa fa-sticky-note-o"/> <field name="note"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </templates>
+                        </kanban>
                     </field>
                     <group>
                         <field name="notes" placeholder="Catatan tambahan (opsional)..."
                                attrs="{'readonly': [('state','=','done')]}"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Form kecil untuk 1 Aktivitas QC, dibuka saat kartu Kanban di atas
+         di-tap (bukan di tombol OK/Not OK/N/A), dipakai kalau perlu isi
+         Catatan untuk aktivitas tersebut (mis. detail kenapa Not OK). -->
+    <record id="view_production_qc_checklist_item_form" model="ir.ui.view">
+        <field name="name">lpj.production.qc.checklist.item.form</field>
+        <field name="model">lpj.production.qc.checklist.item</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group attrs="{'readonly': [('checklist_state','=','done')]}">
+                        <field name="checklist_state" invisible="1"/>
+                        <field name="result" widget="radio"/>
+                        <field name="note" placeholder="Catatan (opsional)..."/>
                     </group>
                 </sheet>
             </form>

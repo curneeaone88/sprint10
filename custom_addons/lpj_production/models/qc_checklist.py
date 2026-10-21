@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 
 class ProductionQcChecklist(models.Model):
@@ -25,7 +26,7 @@ class ProductionQcChecklist(models.Model):
         'lpj.production.ok', string='Order Kerja',
         related='ok_line_id.ok_id', store=True, readonly=True)
     workcenter_group_id = fields.Many2one(
-        'lpj.workcenter.group', string='Kategori Tahapan',
+        'lpj.workcenter.group', string='Kategori Proses',
         related='ok_line_id.workcenter_group_id', store=True, readonly=True)
     workcenter_id = fields.Many2one(
         'mrp.workcenter', string='Mesin',
@@ -92,9 +93,9 @@ class ProductionQcChecklist(models.Model):
         memang tidak berlaku, tidak boleh dibiarkan kosong."""
         for rec in self:
             if any(not item.result for item in rec.item_ids):
-                from odoo.exceptions import UserError
-                raise UserError(u"Masih ada aktivitas QC yang belum diisi hasilnya "
-                                 u"(pilih OK, Not OK, atau None kalau tidak berlaku).")
+                raise UserError(_(
+                    "Masih ada aktivitas QC yang belum diisi hasilnya "
+                    "(pilih OK, Not OK, atau None kalau tidak berlaku)."))
             rec.write({
                 'state': 'done',
                 'qc_inspector_id': self.env.user.id,
@@ -117,6 +118,28 @@ class ProductionQcChecklistItem(models.Model):
 
     checklist_id = fields.Many2one(
         'lpj.production.qc.checklist', string='Checklist', required=True, ondelete='cascade')
+    checklist_state = fields.Selection(
+        related='checklist_id.state', string='Status Checklist', readonly=True, store=True,
+        help="Cuma dipakai di tampilan Kanban (lihat views/qc_checklist_view.xml) "
+             "untuk menyembunyikan tombol OK/Not OK/None begitu checklist induknya "
+             "sudah dikonfirmasi (Done) -- tanpa ini, template kanban tidak bisa "
+             "tahu status checklist induk dari baris item saja.")
+    # Field khusus laporan QC (tidak ditampilkan di form)
+    ok_id = fields.Many2one(
+        'lpj.production.ok', string='Order Kerja',
+        related='checklist_id.ok_id', store=True, readonly=True)
+    workcenter_group_id = fields.Many2one(
+        'lpj.workcenter.group', string='Kategori Proses',
+        related='checklist_id.workcenter_group_id', store=True, readonly=True)
+    workcenter_id = fields.Many2one(
+        'mrp.workcenter', string='Mesin',
+        related='checklist_id.workcenter_id', store=True, readonly=True)
+    qc_inspector_id = fields.Many2one(
+        'res.users', string='QC Inspector',
+        related='checklist_id.qc_inspector_id', store=True, readonly=True)
+    date_check = fields.Datetime(
+        string='Tanggal Pengecekan',
+        related='checklist_id.date_check', store=True, readonly=True)
     item_template_id = fields.Many2one('lpj.qc.item.template', string='Referensi Aktivitas QC')
     sequence = fields.Integer(default=10)
     name = fields.Char(string='Aktivitas QC', required=True)
@@ -126,3 +149,32 @@ class ProductionQcChecklistItem(models.Model):
         ('none', 'None (Tidak Berlaku)'),
     ], string='Hasil')
     note = fields.Char(string='Catatan')
+
+    @api.multi
+    def _check_checklist_editable(self):
+        for rec in self:
+            if rec.checklist_id.state == 'done':
+                raise UserError(_(
+                    "Checklist ini sudah dikonfirmasi (Done) -- tidak bisa "
+                    "diubah lagi lewat tombol cepat. Set ke Draft dulu kalau "
+                    "memang perlu dikoreksi."))
+
+    @api.multi
+    def action_set_ok(self):
+        """Tombol cepat 'OK' di kartu Kanban mobile -- 1 tap langsung set
+        hasil, tanpa buka dropdown/form terpisah."""
+        self._check_checklist_editable()
+        self.write({'result': 'ok'})
+        return True
+
+    @api.multi
+    def action_set_not_ok(self):
+        self._check_checklist_editable()
+        self.write({'result': 'not_ok'})
+        return True
+
+    @api.multi
+    def action_set_none(self):
+        self._check_checklist_editable()
+        self.write({'result': 'none'})
+        return True

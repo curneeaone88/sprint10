@@ -13,9 +13,9 @@
         Fitur utama:
 
         - Order Kerja (OK) sebagai unit kerja utama, dibuat per SO Line
-        - Master Routing (custom) -- tiap Operation cukup menunjuk kategori tahapan,
+        - Master Routing (custom) -- tiap Operation cukup menunjuk kategori proses,
           mesin spesifik dipilih PPIC/operator saat OK dibuat
-        - Master Tahapan (kategori) & Master Mesin (reuse mrp.workcenter) dua layer terpisah
+        - Master (Kategori Proses, Mesin, Routing, QC) sekarang di modul lpj_design
         - Snapshot routing per OK (OK Line) supaya histori tidak berubah saat master routing diedit
         - Checklist Kualitas (QC) digital per mesin, terhubung ke OK Line via tombol "Isi Checklist"
         - Papan Kanban status produksi (Draft, Confirmed, Cetak, Finishing, Packing, Done)
@@ -31,27 +31,22 @@
     'website': "https://sprint.co.id",
 
     'category': 'Manufacturing',
-    'version': '1.0',
+    'version': '1.4.2',
 
     # mrp: reuse mrp.workcenter sebagai Master Mesin (bukan pakai alur MRP/MO,
     # dan bukan pakai mrp.routing -- Master Routing custom, lihat models/routing.py)
-    'depends': ['base', 'sale', 'product', 'stock', 'mrp', 'lpj_sales', 'lpj_product'],
+    'depends': ['base', 'sale', 'product', 'stock', 'mrp', 'lpj_sales', 'lpj_product', 'lpj_design'],
 
     'data': [
         'security/security.xml',
         'security/ir.model.access.csv',
         'data/ir_sequence.xml',
-        'views/qc_item_template_view.xml',
-        'views/workcenter_group_view.xml',
-        'views/workcenter_extend_view.xml',
-        'views/routing_view.xml',
         'views/qc_checklist_view.xml',
         'views/production_ok_view.xml',
         'views/sale_order_view.xml',
-        'views/product_view.xml',
         'views/planning_view.xml',
         'views/ok_shortage_wizard_view.xml',
-        'views/production_settings_view.xml',
+        'views/report_view.xml',
         'views/menu.xml',
     ],
     'installable': True,

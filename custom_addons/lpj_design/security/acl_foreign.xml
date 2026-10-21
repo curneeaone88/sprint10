@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Hak akses tim Desain ke model bawaan/modul lain yang mereka sentuh.
+         Pakai search= supaya tidak error bila model/xmlid berbeda; verifikasi
+         di staging dengan user Desain. -->
+
+    <record id="acl_design_mrp_workcenter" model="ir.model.access">
+        <field name="name">mrp.workcenter design user</field>
+        <field name="model_id" search="[('model', '=', 'mrp.workcenter')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_product_template" model="ir.model.access">
+        <field name="name">product.template design user</field>
+        <field name="model_id" search="[('model', '=', 'product.template')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_product_product" model="ir.model.access">
+        <field name="name">product.product design user</field>
+        <field name="model_id" search="[('model', '=', 'product.product')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_product_category" model="ir.model.access">
+        <field name="name">product.category design user</field>
+        <field name="model_id" search="[('model', '=', 'product.category')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_sale_order" model="ir.model.access">
+        <field name="name">sale.order design user</field>
+        <field name="model_id" search="[('model', '=', 'sale.order')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_sale_order_line" model="ir.model.access">
+        <field name="name">sale.order.line design user</field>
+        <field name="model_id" search="[('model', '=', 'sale.order.line')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_x_sales_quotation" model="ir.model.access">
+        <field name="name">x.sales.quotation design user</field>
+        <field name="model_id" search="[('model', '=', 'x.sales.quotation')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_res_partner" model="ir.model.access">
+        <field name="name">res.partner design user</field>
+        <field name="model_id" search="[('model', '=', 'res.partner')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_product_uom" model="ir.model.access">
+        <field name="name">product.uom design user</field>
+        <field name="model_id" search="[('model', '=', 'product.uom')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="acl_design_product_uom_categ" model="ir.model.access">
+        <field name="name">product.uom.categ design user</field>
+        <field name="model_id" search="[('model', '=', 'product.uom.categ')]"/>
+        <field name="group_id" ref="group_design_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+</odoo>

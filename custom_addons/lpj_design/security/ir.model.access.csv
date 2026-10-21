@@ -1,0 +1,17 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_lpj_workcenter_group_ro,lpj_workcenter_group ro,model_lpj_workcenter_group,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_workcenter_group_du,lpj_workcenter_group du,model_lpj_workcenter_group,group_design_user,1,1,1,0
+access_lpj_workcenter_group_dm,lpj_workcenter_group dm,model_lpj_workcenter_group,group_design_manager,1,1,1,1
+access_lpj_routing_ro,lpj_routing ro,model_lpj_routing,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_routing_du,lpj_routing du,model_lpj_routing,group_design_user,1,1,1,0
+access_lpj_routing_dm,lpj_routing dm,model_lpj_routing,group_design_manager,1,1,1,1
+access_lpj_routing_line_ro,lpj_routing_line ro,model_lpj_routing_line,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_routing_line_du,lpj_routing_line du,model_lpj_routing_line,group_design_user,1,1,1,0
+access_lpj_routing_line_dm,lpj_routing_line dm,model_lpj_routing_line,group_design_manager,1,1,1,1
+access_lpj_qc_item_template_ro,lpj_qc_item_template ro,model_lpj_qc_item_template,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_qc_item_template_du,lpj_qc_item_template du,model_lpj_qc_item_template,group_design_user,1,1,1,0
+access_lpj_qc_item_template_dm,lpj_qc_item_template dm,model_lpj_qc_item_template,group_design_manager,1,1,1,1
+access_lpj_product_bom_line_ro,lpj_product_bom_line ro,model_lpj_product_bom_line,lpj_product.group_produksi_user_readonly,1,0,0,0
+access_lpj_product_bom_line_du,lpj_product_bom_line du,model_lpj_product_bom_line,group_design_user,1,1,1,0
+access_lpj_product_bom_line_dm,lpj_product_bom_line dm,model_lpj_product_bom_line,group_design_manager,1,1,1,1
+access_lpj_product_bom_line_internal,lpj_product_bom_line internal read,model_lpj_product_bom_line,base.group_user,1,0,0,0

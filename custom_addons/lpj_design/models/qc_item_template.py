@@ -3,7 +3,7 @@ from odoo import models, fields, api
 
 
 class QcItemTemplate(models.Model):
-    """Master AKTIVITAS QC per KATEGORI TAHAPAN (bukan per mesin individual,
+    """Master AKTIVITAS QC per KATEGORI PROSES (bukan per mesin individual,
     dan bukan produk/barang) -- supaya tidak perlu isi checklist yang sama
     berulang-ulang untuk tiap mesin dalam satu kategori. Semua mesin dengan
     kategori yang sama otomatis pakai aktivitas QC yang sama.
@@ -23,6 +23,6 @@ class QcItemTemplate(models.Model):
     name = fields.Char(string='Aktivitas QC', required=True,
                         help="Nama aktivitas pengecekan, mis. 'Cek Warna', 'Cek Bleeding'.")
     workcenter_group_id = fields.Many2one(
-        'lpj.workcenter.group', string='Kategori Tahapan', required=True, ondelete='cascade')
+        'lpj.workcenter.group', string='Kategori Proses', required=True, ondelete='cascade')
     sequence = fields.Integer(string='Urutan', default=10)
     active = fields.Boolean(default=True)

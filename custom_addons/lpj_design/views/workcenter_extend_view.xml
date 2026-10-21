@@ -21,7 +21,7 @@
                         <group>
                             <field name="name"/>
                             <field name="x_code"/>
-                            <field name="x_workcenter_group_id"/>
+                            <field name="x_workcenter_group_ids" widget="many2many_tags"/>
                         </group>
                         <group>
                             <field name="x_capacity_qty"/>
@@ -45,7 +45,7 @@
             <tree>
                 <field name="name"/>
                 <field name="x_code"/>
-                <field name="x_workcenter_group_id"/>
+                <field name="x_workcenter_group_ids" widget="many2many_tags"/>
                 <field name="x_capacity_qty"/>
                 <field name="x_capacity_uom"/>
                 <field name="x_default_priority"/>
@@ -61,7 +61,7 @@
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'tree', 'view_id': ref('view_mrp_workcenter_production_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('view_mrp_workcenter_production_form')})]"/>
-        <field name="help">Daftar mesin fisik (mrp.workcenter) -- dikaitkan ke Kategori Tahapan. Aktivitas QC diatur di Master Tahapan, bukan per mesin.</field>
+        <field name="help">Daftar mesin fisik (mrp.workcenter) -- dikaitkan ke Kategori Proses. Aktivitas QC diatur di Master Kategori Proses, bukan per mesin.</field>
     </record>
 
 </odoo>

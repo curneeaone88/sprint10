@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Laporan Produksi (pivot + grafik). Hanya Supervisor dan Manager.
+        Sumber: OK Line (output, mesin, durasi), OK (waste, ketepatan waktu),
+        Item Checklist QC. Field laporan tidak ditampilkan di form OK, hanya
+        muncul sebagai Measure di pivot.
+    -->
+
+    <!-- ============ Search view OK Line ============ -->
+    <record id="view_report_ok_line_search" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.report.search</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="ok_id"/>
+                <field name="workcenter_group_id"/>
+                <field name="workcenter_id"/>
+                <field name="operator_id"/>
+                <filter string="7 Hari Terakhir" name="f_7d"
+                        domain="[('date_done_day', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter string="Bulan Ini" name="f_month"
+                        domain="[('date_done_day', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <separator/>
+                <filter string="Selesai" name="f_done" domain="[('state', '=', 'done')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Hari" name="g_day" context="{'group_by': 'date_done_day:day'}"/>
+                    <filter string="Bulan" name="g_month" context="{'group_by': 'report_month'}"/>
+                    <filter string="Proses" name="g_group" context="{'group_by': 'workcenter_group_id'}"/>
+                    <filter string="Mesin" name="g_machine" context="{'group_by': 'workcenter_id'}"/>
+                    <filter string="Operator" name="g_operator" context="{'group_by': 'operator_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============ 1. Output Harian ============ -->
+    <record id="view_report_output_pivot" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.output.pivot</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Output Harian">
+                <field name="date_done_day" interval="day" type="row"/>
+                <field name="workcenter_group_id" type="col"/>
+                <field name="m2_bahan" type="measure"/>
+                <field name="m2_product" type="measure"/>
+                <field name="meter_lari" type="measure"/>
+                <field name="qty_pcs" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_report_output_graph" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.output.graph</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <graph string="Output Harian" type="bar">
+                <field name="date_done_day" interval="day"/>
+                <field name="m2_bahan" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_report_output" model="ir.actions.act_window">
+        <field name="name">Output Harian per Proses dan Operator</field>
+        <field name="res_model">lpj.production.ok.line</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_report_output_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_report_output_graph')})]"/>
+        <field name="search_view_id" ref="view_report_ok_line_search"/>
+        <field name="domain">[('state', '=', 'done')]</field>
+        <field name="context">{'search_default_f_month': 1}</field>
+        <field name="groups_id" eval="[(6, 0, [ref('lpj_product.group_produksi_supervisor'), ref('lpj_product.group_produksi_manager')])]"/>
+    </record>
+
+    <!-- ============ 2. Produktivitas Mesin ============ -->
+    <record id="view_report_machine_pivot" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.machine.pivot</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Produktivitas Mesin">
+                <field name="workcenter_group_id" type="row"/>
+                <field name="workcenter_id" type="row"/>
+                <field name="report_month" type="col"/>
+                <field name="m2_bahan" type="measure"/>
+                <field name="duration_hours" type="measure"/>
+                <field name="m2_per_hour" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_report_machine_graph" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.machine.graph</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <graph string="Produktivitas Mesin" type="bar">
+                <field name="workcenter_id"/>
+                <field name="m2_bahan" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_report_machine" model="ir.actions.act_window">
+        <field name="name">Produktivitas Mesin</field>
+        <field name="res_model">lpj.production.ok.line</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_report_machine_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_report_machine_graph')})]"/>
+        <field name="search_view_id" ref="view_report_ok_line_search"/>
+        <field name="domain">[('state', '=', 'done')]</field>
+        <field name="context">{'search_default_f_month': 1}</field>
+        <field name="groups_id" eval="[(6, 0, [ref('lpj_product.group_produksi_supervisor'), ref('lpj_product.group_produksi_manager')])]"/>
+    </record>
+
+    <!-- ============ 3. Durasi Proses ============ -->
+    <record id="view_report_duration_pivot" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.duration.pivot</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Durasi Proses">
+                <field name="workcenter_group_id" type="row"/>
+                <field name="report_month" type="col"/>
+                <field name="duration_hours_avg" type="measure"/>
+                <field name="wait_hours" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_report_duration_graph" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.duration.graph</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <graph string="Durasi Proses" type="bar">
+                <field name="workcenter_group_id"/>
+                <field name="duration_hours_avg" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_report_duration" model="ir.actions.act_window">
+        <field name="name">Durasi Proses dan Antrean</field>
+        <field name="res_model">lpj.production.ok.line</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_report_duration_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_report_duration_graph')})]"/>
+        <field name="search_view_id" ref="view_report_ok_line_search"/>
+        <field name="domain">[('state', '=', 'done')]</field>
+        <field name="context">{'search_default_f_month': 1}</field>
+        <field name="groups_id" eval="[(6, 0, [ref('lpj_product.group_produksi_supervisor'), ref('lpj_product.group_produksi_manager')])]"/>
+    </record>
+
+    <!-- ============ Search view OK (Waste, Ketepatan Waktu) ============ -->
+    <record id="view_report_ok_search" model="ir.ui.view">
+        <field name="name">lpj.production.ok.report.search</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="x_material_id"/>
+                <filter string="Bulan Ini" name="f_month"
+                        domain="[('date_done', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <filter string="Telat" name="f_late" domain="[('ontime_status', '=', 'late')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Bulan Selesai" name="g_month" context="{'group_by': 'date_done:month'}"/>
+                    <filter string="Customer" name="g_customer" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Produk" name="g_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Bahan" name="g_material" context="{'group_by': 'x_material_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============ 4. Waste Bahan ============ -->
+    <record id="view_report_waste_pivot" model="ir.ui.view">
+        <field name="name">lpj.production.ok.waste.pivot</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <pivot string="Waste Bahan">
+                <field name="x_material_id" type="row"/>
+                <field name="date_done" interval="month" type="col"/>
+                <field name="m2_production" type="measure"/>
+                <field name="waste_bahan" type="measure"/>
+                <field name="waste_percentage" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_report_waste_graph" model="ir.ui.view">
+        <field name="name">lpj.production.ok.waste.graph</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <graph string="Waste Bahan" type="bar">
+                <field name="x_material_id"/>
+                <field name="waste_bahan" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_report_waste" model="ir.actions.act_window">
+        <field name="name">Waste Bahan</field>
+        <field name="res_model">lpj.production.ok</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_report_waste_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_report_waste_graph')})]"/>
+        <field name="search_view_id" ref="view_report_ok_search"/>
+        <field name="domain">[('state', '=', 'done')]</field>
+        <field name="groups_id" eval="[(6, 0, [ref('lpj_product.group_produksi_supervisor'), ref('lpj_product.group_produksi_manager')])]"/>
+    </record>
+
+    <!-- ============ 6. Ketepatan Waktu ============ -->
+    <record id="view_report_otd_pivot" model="ir.ui.view">
+        <field name="name">lpj.production.ok.otd.pivot</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <pivot string="Ketepatan Waktu">
+                <field name="partner_id" type="row"/>
+                <field name="ontime_status" type="col"/>
+                <field name="delay_days" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_report_otd_graph" model="ir.ui.view">
+        <field name="name">lpj.production.ok.otd.graph</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="arch" type="xml">
+            <graph string="Ketepatan Waktu" type="bar">
+                <field name="date_done" interval="month"/>
+                <field name="ontime_status"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_report_otd" model="ir.actions.act_window">
+        <field name="name">Ketepatan Waktu (OK vs Duedate)</field>
+        <field name="res_model">lpj.production.ok</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_report_otd_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_report_otd_graph')})]"/>
+        <field name="search_view_id" ref="view_report_ok_search"/>
+        <field name="domain">[('state', '=', 'done'), ('ontime_status', '!=', False)]</field>
+        <field name="groups_id" eval="[(6, 0, [ref('lpj_product.group_produksi_supervisor'), ref('lpj_product.group_produksi_manager')])]"/>
+    </record>
+
+    <!-- ============ 5. QC ============ -->
+    <record id="view_report_qc_search" model="ir.ui.view">
+        <field name="name">lpj.production.qc.checklist.item.report.search</field>
+        <field name="model">lpj.production.qc.checklist.item</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="workcenter_group_id"/>
+                <field name="workcenter_id"/>
+                <field name="qc_inspector_id"/>
+                <filter string="Not OK saja" name="f_not_ok" domain="[('result', '=', 'not_ok')]"/>
+                <filter string="Bulan Ini" name="f_month"
+                        domain="[('date_check', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Proses" name="g_group" context="{'group_by': 'workcenter_group_id'}"/>
+                    <filter string="Mesin" name="g_machine" context="{'group_by': 'workcenter_id'}"/>
+                    <filter string="Aktivitas QC" name="g_item" context="{'group_by': 'name'}"/>
+                    <filter string="QC Inspector" name="g_inspector" context="{'group_by': 'qc_inspector_id'}"/>
+                    <filter string="Bulan" name="g_month" context="{'group_by': 'date_check:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="view_report_qc_pivot" model="ir.ui.view">
+        <field name="name">lpj.production.qc.checklist.item.pivot</field>
+        <field name="model">lpj.production.qc.checklist.item</field>
+        <field name="arch" type="xml">
+            <pivot string="Hasil QC">
+                <field name="workcenter_group_id" type="row"/>
+                <field name="workcenter_id" type="row"/>
+                <field name="result" type="col"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_report_qc_graph" model="ir.ui.view">
+        <field name="name">lpj.production.qc.checklist.item.graph</field>
+        <field name="model">lpj.production.qc.checklist.item</field>
+        <field name="arch" type="xml">
+            <graph string="Hasil QC" type="bar">
+                <field name="workcenter_group_id"/>
+                <field name="result"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_report_qc" model="ir.actions.act_window">
+        <field name="name">Hasil QC</field>
+        <field name="res_model">lpj.production.qc.checklist.item</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_report_qc_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_report_qc_graph')})]"/>
+        <field name="search_view_id" ref="view_report_qc_search"/>
+        <field name="domain">[('checklist_state', '=', 'done')]</field>
+        <field name="context">{'search_default_f_month': 1}</field>
+        <field name="groups_id" eval="[(6, 0, [ref('lpj_product.group_produksi_supervisor'), ref('lpj_product.group_produksi_manager')])]"/>
+    </record>
+
+</odoo>

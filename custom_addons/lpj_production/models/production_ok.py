@@ -73,7 +73,7 @@ class ProductionOk(models.Model):
              "bahan yang riil (termasuk waste/nesting), bukan teori.")
     total_meter_lari = fields.Float(
         string='Total Meter Lari', compute='_compute_m2_production', store=True,
-        help="Jumlah Meter Lari dari semua OK Line berkategori tahapan yang "
+        help="Jumlah Meter Lari dari semua OK Line berkategori proses yang "
              "ditandai 'Sumber Konsumsi Bahan' (biasanya Cetak).")
     waste_bahan = fields.Float(
         string='Waste Bahan (M2)', compute='_compute_m2_production', store=True,
@@ -122,10 +122,10 @@ class ProductionOk(models.Model):
         string='Qty per Layout', readonly=True)
     x_layout_width = fields.Float(
         related='product_id.product_tmpl_id.x_layout_width',
-        string='Lebar Kertas (cm)', readonly=True)
+        string='Lebar Kertas (mm)', readonly=True)
     x_layout_length = fields.Float(
         related='product_id.product_tmpl_id.x_layout_length',
-        string='Panjang per Layout (cm)', readonly=True)
+        string='Panjang per Layout (mm)', readonly=True)
 
     # ==== Jadwal & Penanggung Jawab ====
     plan_ok = fields.Date(
@@ -151,11 +151,32 @@ class ProductionOk(models.Model):
         ('cancel', 'Cancelled'),
     ], string='Status', default='draft', tracking=True, copy=False, index=True)
 
+    date_done = fields.Datetime(
+        string='Tanggal Selesai (Done)', readonly=True, copy=False,
+        help="Terisi otomatis saat OK menjadi Done. Dipakai untuk laporan "
+             "Produksi (Waste Bahan, Ketepatan Waktu).")
+    delay_days = fields.Float(
+        string='Telat (Hari)', compute='_compute_delay', store=True,
+        group_operator='avg',
+        help="Selisih hari tanggal Done terhadap Duedate Kirim. 0 kalau tepat "
+             "waktu. Hanya untuk laporan Ketepatan Waktu.")
+    ontime_status = fields.Selection([
+        ('on_time', 'Tepat Waktu'),
+        ('late', 'Telat'),
+    ], string='Ketepatan Waktu', compute='_compute_delay', store=True)
+
     status_terakhir = fields.Char(
         string='Status Terakhir', compute='_compute_status_terakhir', store=True,
         help="Gabungan tahap/mesin yang sedang aktif + status baris itu, "
              "mis. \"Cetak - Konika (In Progress)\" -- dihitung otomatis dari "
              "ok_line_ids, supaya kelihatan tanpa buka tab Routing.")
+    all_lines_done = fields.Boolean(
+        string='Semua Routing Selesai', compute='_compute_all_lines_done', store=True,
+        help="True hanya kalau OK Line ada isinya DAN semua baris sudah "
+             "state Done. Dipakai supaya tombol 'Ajukan Validasi' di header "
+             "cuma muncul SETELAH seluruh tahapan Routing benar-benar "
+             "selesai dikerjakan -- bukan bisa diklik kapan saja selama "
+             "status In Progress.")
 
     # ==== Stock (barang jadi) ====
     picking_id = fields.Many2one(
@@ -204,6 +225,13 @@ class ProductionOk(models.Model):
                 rec.status_terakhir = u"%s (%s)" % (stage_name, state_label)
 
     @api.multi
+    @api.depends('ok_line_ids.state')
+    def _compute_all_lines_done(self):
+        for rec in self:
+            lines = rec.ok_line_ids
+            rec.all_lines_done = bool(lines) and all(l.state == 'done' for l in lines)
+
+    @api.multi
     @api.depends('product_id', 'x_length', 'x_width', 'ok_line_ids.meter_lari',
                  'ok_line_ids.workcenter_group_id',
                  'ok_line_ids.workcenter_group_id.is_material_consumption_stage')
@@ -215,14 +243,16 @@ class ProductionOk(models.Model):
             rec.total_meter_lari = total_ml
 
             tmpl = rec.product_id.product_tmpl_id
-            lebar_cm = tmpl.x_layout_width or 0.0
-            rec.m2_production = (lebar_cm / 100.0) * total_ml
+            lebar_mm = tmpl.x_layout_width or 0.0
+            rec.m2_production = (lebar_mm / 1000.0) * total_ml
 
             # Waste bahan: M2 Production (riil, dari Meter Lari) dikurangi
             # luas sticker TEORETIS yang seharusnya muat dalam Meter Lari
             # yang sama, dihitung via rasio 1 layout (m2 sticker per layout
             # dibagi panjang 1 layout, dikali total meter lari).
-            panjang_layout_m = (tmpl.x_layout_length or 0.0) / 100.0
+            # Semua ukuran fisik di modul ini konsisten pakai MM supaya tidak
+            # ada campur cm/mm yang bikin bingung konversi -- MM/1000 = Meter.
+            panjang_layout_m = (tmpl.x_layout_length or 0.0) / 1000.0
             qty_per_layout = tmpl.x_layout_qty_pcs or 0
             if panjang_layout_m and qty_per_layout and rec.x_length and rec.x_width:
                 m2_sticker_per_layout = (rec.x_length / 1000.0) * (rec.x_width / 1000.0) * qty_per_layout
@@ -235,6 +265,57 @@ class ProductionOk(models.Model):
                 rec.waste_percentage = 0.0
 
     @api.multi
+    @api.depends('date_done', 'duedate_kirim')
+    def _compute_delay(self):
+        for rec in self:
+            if rec.date_done and rec.duedate_kirim:
+                done_day = fields.Date.from_string(
+                    fields.Date.context_today(rec, fields.Datetime.from_string(rec.date_done)))
+                due_day = fields.Date.from_string(
+                    fields.Date.context_today(rec, fields.Datetime.from_string(rec.duedate_kirim)))
+                diff = (done_day - due_day).days
+                rec.delay_days = max(diff, 0)
+                rec.ontime_status = 'late' if diff > 0 else 'on_time'
+            else:
+                rec.delay_days = 0.0
+                rec.ontime_status = False
+
+    @api.model
+    def read_group(self, domain, fields, groupby, offset=0, limit=None,
+                   orderby=False, lazy=True):
+        """Kolom Kanban OK berurutan sesuai alur: Draft, Confirmed,
+        In Progress, Menunggu Validasi, Done, Cancelled (bukan abjad), dan
+        semua kolom selalu tampil walau kosong."""
+        res = super(ProductionOk, self).read_group(
+            domain, fields, groupby, offset=offset, limit=limit,
+            orderby=orderby, lazy=lazy)
+        first = groupby[0] if isinstance(groupby, (list, tuple)) and groupby else groupby
+        if first == 'state':
+            states = [k for k, _l in self._fields['state'].selection]
+            labels = dict(self._fields['state'].selection)
+            present = set(g.get('state') for g in res)
+            if lazy or len(groupby) == 1:
+                for key in states:
+                    if key not in present:
+                        res.append({
+                            'state': key,
+                            'state_count': 0,
+                            '__domain': [('state', '=', key)] + list(domain),
+                            '__context': {'group_by': list(groupby[1:])},
+                        })
+            res = sorted(res, key=lambda g: states.index(g.get('state'))
+                         if g.get('state') in states else len(states))
+        return res
+
+    @api.multi
+    def write(self, vals):
+        if vals.get('state') == 'done':
+            vals = dict(vals, date_done=fields.Datetime.now())
+        elif vals.get('state') and vals['state'] != 'done':
+            vals = dict(vals, date_done=False)
+        return super(ProductionOk, self).write(vals)
+
+    @api.multi
     def _get_jumlah_layout(self):
         """Jumlah layout = Total Meter Lari OK / Panjang per Layout produk.
         Dipakai sebagai basis tunggal perhitungan konsumsi BOM (lihat
@@ -242,7 +323,7 @@ class ProductionOk(models.Model):
         di BOM dihitung qty_per_unit (per 1 layout) x jumlah layout ini."""
         self.ensure_one()
         tmpl = self.product_id.product_tmpl_id
-        panjang_layout_m = (tmpl.x_layout_length or 0.0) / 100.0
+        panjang_layout_m = (tmpl.x_layout_length or 0.0) / 1000.0
         if not panjang_layout_m:
             return 0.0
         return self.total_meter_lari / panjang_layout_m
@@ -343,11 +424,20 @@ class ProductionOk(models.Model):
 
     @api.multi
     def action_request_validation(self):
-        """In Progress -> Menunggu Validasi SPV. Dipanggil otomatis dari
-        ProductionOkLine.write() begitu semua baris Routing sudah Done, ATAU
-        bisa diklik manual kalau SPV mau menutup lebih awal meski belum
-        semua baris Done. TIDAK langsung Done -- itu keputusan sengaja
-        (butuh validasi SPV Produksi, lihat action_validate_done)."""
+        """In Progress -> Menunggu Validasi SPV. Tombol ini di header SENGAJA
+        disembunyikan (lihat all_lines_done & views/production_ok_view.xml)
+        sampai SEMUA baris Routing (ok_line_ids) sudah Done -- tidak lagi
+        bisa diklik lebih awal/prematur. Guard di sini cuma jaga-jaga kalau
+        dipanggil lewat jalur lain (mis. automation/API), bukan cuma andalkan
+        UI. TIDAK langsung Done -- itu keputusan sengaja (butuh validasi SPV
+        Produksi, lihat action_validate_done)."""
+        for rec in self:
+            if rec.state != 'in_progress':
+                continue
+            if not rec.all_lines_done:
+                raise UserError(_(
+                    "Belum bisa mengajukan validasi -- masih ada baris Routing "
+                    "yang belum Done."))
         self.filtered(lambda r: r.state == 'in_progress').write({'state': 'to_validate'})
         return True
 
@@ -471,12 +561,20 @@ class ProductionOkLine(models.Model):
         'lpj.production.ok', string='Order Kerja', required=True, ondelete='cascade', index=True)
     sequence = fields.Integer(string='Urutan', default=10)
 
+    input_mode = fields.Selection(
+        related='workcenter_group_id.x_input_mode', string='Mode Input', readonly=True)
+    can_start = fields.Boolean(
+        string='Boleh Dimulai', compute='_compute_can_start',
+        help="True kalau semua baris Routing SEBELUM baris ini (urutan "
+             "sequence) sudah Done -- tahapan harus berurutan sesuai Master "
+             "Routing, tidak boleh lompat.")
+
     workcenter_group_id = fields.Many2one(
         'lpj.workcenter.group', string='Operation', required=True,
         help="Tahapan yang dikerjakan pada baris ini, mis. Cetak, Plong, Packing.")
     workcenter_id = fields.Many2one(
         'mrp.workcenter', string='Machine',
-        domain="[('x_workcenter_group_id', '=', workcenter_group_id)]")
+        domain="[('x_workcenter_group_ids', 'in', [workcenter_group_id])]")
     operator_id = fields.Many2one('res.users', string='Operator')
 
     plan_date = fields.Date(string='Plan Date')
@@ -510,18 +608,140 @@ class ProductionOkLine(models.Model):
         ('ok', 'Sesuai'),
         ('not_ok', 'Ada Tidak Sesuai'),
     ], string='Status QC', compute='_compute_qc_status', store=True)
+    qc_required = fields.Boolean(
+        string='Tahap ini Butuh QC', compute='_compute_qc_required', store=True,
+        help="True kalau kategori proses (workcenter_group_id) baris ini "
+             "punya minimal 1 Aktivitas QC terdaftar di Master. Dipakai "
+             "khusus untuk tombol di tree OK (Mulai/Isi Checklist/Selesai) "
+             "supaya tombol 'Isi Checklist' hanya muncul kalau memang "
+             "relevan -- beda dari qc_status yang baru berubah dari 'none' "
+             "SETELAH checklist-nya dibuat (checklist dibuat lazily saat "
+             "tombol diklik, jadi tidak bisa dipakai sendirian untuk "
+             "menentukan apakah tombolnya perlu ditampilkan).")
+
+    # ==== Field khusus laporan Produksi (tidak ditampilkan di form OK) ====
+    date_done_day = fields.Date(
+        string='Tanggal Selesai', compute='_compute_report_fields', store=True,
+        help="Tanggal (zona waktu user) dari End. Untuk laporan output harian.")
+    m2_bahan = fields.Float(
+        string='M2 Bahan', compute='_compute_report_fields', store=True,
+        help="Lebar Kertas layout x Meter Lari baris ini (pemakaian bahan riil).")
+    m2_product = fields.Float(
+        string='M2 Produk', compute='_compute_report_fields', store=True,
+        help="Panjang x Lebar produk (OK) x Qty Pcs baris ini (luas produk jadi).")
+    duration_hours = fields.Float(
+        string='Durasi (Jam)', compute='_compute_report_fields', store=True)
+    duration_hours_avg = fields.Float(
+        string='Rata-rata Durasi (Jam)', compute='_compute_report_fields',
+        store=True, group_operator='avg')
+    wait_hours = fields.Float(
+        string='Antrean Sebelum Mulai (Jam)', compute='_compute_report_fields',
+        store=True, group_operator='avg',
+        help="Jeda dari baris sebelumnya selesai sampai baris ini dimulai.")
+    m2_per_hour = fields.Float(
+        string='M2 Bahan per Jam', compute='_compute_report_fields',
+        store=True, group_operator='avg')
+    report_month = fields.Char(
+        string='Bulan', compute='_compute_report_fields', store=True)
+
+    @api.multi
+    @api.depends('date_start', 'date_end', 'meter_lari', 'qty_pcs',
+                 'ok_id.x_length', 'ok_id.x_width',
+                 'ok_id.product_id.product_tmpl_id.x_layout_width',
+                 'ok_id.ok_line_ids.date_end', 'ok_id.ok_line_ids.sequence')
+    def _compute_report_fields(self):
+        for rec in self:
+            ok = rec.ok_id
+            tmpl = ok.product_id.product_tmpl_id
+            lebar_m = (tmpl.x_layout_width or 0.0) / 1000.0
+            rec.m2_bahan = lebar_m * (rec.meter_lari or 0.0)
+            rec.m2_product = ((ok.x_length or 0.0) / 1000.0) * \
+                ((ok.x_width or 0.0) / 1000.0) * (rec.qty_pcs or 0.0)
+
+            start = fields.Datetime.from_string(rec.date_start) if rec.date_start else False
+            end = fields.Datetime.from_string(rec.date_end) if rec.date_end else False
+            if end:
+                rec.date_done_day = fields.Date.context_today(rec, end)
+                rec.report_month = rec.date_done_day[:7]
+            else:
+                rec.date_done_day = False
+                rec.report_month = False
+            hours = 0.0
+            if start and end and end > start:
+                hours = (end - start).total_seconds() / 3600.0
+            rec.duration_hours = hours
+            rec.duration_hours_avg = hours
+            rec.m2_per_hour = rec.m2_bahan / hours if hours else 0.0
+
+            wait = 0.0
+            if start:
+                prev = ok.ok_line_ids.filtered(
+                    lambda l: l.id != rec.id and l.date_end and
+                    (l.sequence, l.id) < (rec.sequence, rec.id)).sorted(
+                        key=lambda l: (l.sequence, l.id))
+                if prev:
+                    prev_end = fields.Datetime.from_string(prev[-1].date_end)
+                    if start > prev_end:
+                        wait = (start - prev_end).total_seconds() / 3600.0
+            rec.wait_hours = wait
 
     @api.onchange('meter_lari', 'workcenter_group_id')
     def _onchange_meter_lari_suggest_qty_pcs(self):
-        """Cuma menyaran nilai Qty Pcs (operator masih bisa timpa manual) --
-        BUKAN compute keras, karena tidak semua tahap berbasis Meter Lari
-        (mis. Packing hasilnya emang dihitung per pcs langsung, tidak lewat
-        Meter Lari sama sekali). Cek Master Tahapan.x_input_mode dulu."""
-        if self.workcenter_group_id and self.workcenter_group_id.x_input_mode == 'meter_lari':
-            tmpl = self.ok_id.product_id.product_tmpl_id if self.ok_id else False
-            if tmpl and tmpl.x_layout_length and tmpl.x_layout_qty_pcs:
-                panjang_layout_m = tmpl.x_layout_length / 100.0
-                self.qty_pcs = (self.meter_lari / panjang_layout_m) * tmpl.x_layout_qty_pcs
+        """Dua kriteria tahapan (lihat Master Kategori Proses.x_input_mode):
+        - 'meter_lari' (mis. Cetak): operator input Meter Lari, Qty Pcs
+          disaranin otomatis = (Meter Lari / Panjang per Layout) x Qty per
+          Layout. Masih bisa dikoreksi manual.
+        - 'qty_pcs' (mis. Packing): operator input Qty Pcs langsung, Meter
+          Lari tidak dipakai, dan TIDAK ADA hitung-hitungan sama sekali.
+        Kalau data Layout produk belum lengkap, saran dilewati (tidak error)
+        dan Qty Pcs diisi manual."""
+        qty = self._calc_qty_pcs_from_meter()
+        if qty:
+            self.qty_pcs = qty
+
+    @api.multi
+    def _calc_qty_pcs_from_meter(self):
+        """(Meter Lari / Panjang per Layout) x Qty per Layout, khusus tahap
+        mode 'meter_lari'. Return 0.0 kalau bukan mode itu, Meter Lari
+        kosong, atau data Layout produk belum lengkap. Dipakai oleh onchange
+        DAN fallback di server (create/write/Done), karena onchange tidak
+        selalu punya ok_id (mis. popup Input Hasil / baris tree baru) dan
+        saat itu saran Qty Pcs tidak terisi."""
+        self.ensure_one()
+        group = self.workcenter_group_id
+        if not group or group.x_input_mode != 'meter_lari' or not self.meter_lari:
+            return 0.0
+        tmpl = self.ok_id.product_id.product_tmpl_id if self.ok_id else False
+        if not (tmpl and tmpl.x_layout_length and tmpl.x_layout_qty_pcs):
+            return 0.0
+        panjang_layout_m = tmpl.x_layout_length / 1000.0
+        return (self.meter_lari / panjang_layout_m) * tmpl.x_layout_qty_pcs
+
+    @api.multi
+    def _check_result_filled(self):
+        """Hasil output wajib terisi sesuai mode tahapan sebelum Done:
+        mode 'meter_lari' -> Meter Lari dan Qty Pcs; mode 'qty_pcs' -> cukup
+        Qty Pcs (Meter Lari tidak diminta)."""
+        for rec in self:
+            mode = rec.workcenter_group_id.x_input_mode
+            name = rec.workcenter_group_id.name or '-'
+            if mode == 'meter_lari' and rec.meter_lari and not rec.qty_pcs:
+                rec.qty_pcs = rec._calc_qty_pcs_from_meter()
+            if mode == 'meter_lari' and not rec.meter_lari:
+                raise UserError(_(
+                    "Tahap '%s' belum bisa diselesaikan: isi Meter Lari dulu "
+                    "(Qty Pcs akan terhitung otomatis dari Layout).") % name)
+            if not rec.qty_pcs:
+                raise UserError(_(
+                    "Tahap '%s' belum bisa diselesaikan: Qty Pcs hasil tahap "
+                    "ini belum diisi.") % name)
+
+    @api.multi
+    @api.depends('workcenter_group_id', 'workcenter_group_id.qc_item_template_ids')
+    def _compute_qc_required(self):
+        for rec in self:
+            rec.qc_required = bool(
+                rec.workcenter_group_id and rec.workcenter_group_id.qc_item_template_ids)
 
     @api.multi
     @api.depends('qc_checklist_ids', 'qc_checklist_ids.result_summary', 'qc_checklist_ids.state')
@@ -538,7 +758,7 @@ class ProductionOkLine(models.Model):
     @api.multi
     def _qc_required_and_cleared(self):
         """True kalau baris ini boleh ditandai Done ditinjau dari sisi QC:
-        - Kalau kategori tahapannya tidak punya aktivitas QC terdaftar sama sekali -> True (tidak berlaku).
+        - Kalau kategori prosesnya tidak punya aktivitas QC terdaftar sama sekali -> True (tidak berlaku).
         - Kalau punya -> True hanya kalau ada checklist yang sudah dikonfirmasi (state='done')."""
         self.ensure_one()
         if not self.workcenter_group_id or not self.workcenter_group_id.qc_item_template_ids:
@@ -546,17 +766,78 @@ class ProductionOkLine(models.Model):
         return bool(self.qc_checklist_ids.filtered(lambda c: c.state == 'done'))
 
     @api.multi
+    @api.depends('state', 'sequence', 'ok_id.ok_line_ids.state', 'ok_id.ok_line_ids.sequence')
+    def _compute_can_start(self):
+        for rec in self:
+            prev = rec.ok_id.ok_line_ids.filtered(
+                lambda l: l.id != rec.id and (l.sequence, l.id) < (rec.sequence, rec.id))
+            rec.can_start = all(l.state == 'done' for l in prev)
+
+    @api.multi
+    def _check_ready_to_start(self, vals=None):
+        """Sebelum tahap di-Start, Machine, Operator, dan Plan Date WAJIB
+        sudah diisi -- supaya data siapa/di mana/kapan tidak kosong di OK.
+        vals (opsional) = nilai yang sedang ditulis bersamaan dengan
+        perubahan state, dipakai kalau field itu diisi di write yang sama."""
+        vals = vals or {}
+        labels = (
+            ('workcenter_id', _('Machine')),
+            ('operator_id', _('Operator')),
+            ('plan_date', _('Plan Date')),
+        )
+        for rec in self:
+            missing = [label for fname, label in labels
+                       if not (vals[fname] if fname in vals else rec[fname])]
+            if missing:
+                raise UserError(_(
+                    "Tahap '%s' belum bisa dimulai. Field berikut wajib "
+                    "diisi dulu: %s."
+                ) % (rec.workcenter_group_id.name or '-', ', '.join(missing)))
+        return True
+
+    @api.multi
     def action_start_line(self):
         """Operator mulai kerjakan tahap ini. Baris pertama yang dimulai
         otomatis memindahkan OK header dari Confirmed ke In Progress."""
         for rec in self:
+            if rec.state == 'draft' and not rec.can_start:
+                raise UserError(_(
+                    "Tahap '%s' belum bisa dimulai -- selesaikan dulu tahap "
+                    "sebelumnya sesuai urutan Routing.") % (rec.workcenter_group_id.name or '-'))
             if rec.state == 'draft':
+                rec._check_ready_to_start()
                 rec.write({'state': 'in_progress'})
                 if not rec.date_start:
                     rec.date_start = fields.Datetime.now()
             if rec.ok_id.state == 'confirmed':
                 rec.ok_id.action_start()
         return True
+
+    @api.multi
+    def action_open_result_form(self):
+        """Popup kecil untuk mengisi hasil output tahap ini (Meter Lari /
+        Qty Pcs) dari tampilan kartu mobile, karena field di kartu Kanban
+        tidak bisa diedit langsung."""
+        self.ensure_one()
+        view = self.env.ref('lpj_production.view_production_ok_line_result_form')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Input Hasil Tahap'),
+            'res_model': 'lpj.production.ok.line',
+            'view_type': 'form',
+            'view_mode': 'form',
+            'views': [(view.id, 'form')],
+            'res_id': self.id,
+            'target': 'new',
+        }
+
+    @api.multi
+    def action_save_result(self):
+        """Tombol Simpan di popup Input Hasil. Odoo 10 tidak mengenal
+        special="save" (tombol tanpa type dianggap workflow, jadi error
+        exec_workflow), jadi pakai tombol object biasa: record sudah
+        otomatis tersimpan sebelum method ini dipanggil, tinggal tutup popup."""
+        return {'type': 'ir.actions.act_window_close'}
 
     @api.multi
     def action_done_line(self):
@@ -567,28 +848,47 @@ class ProductionOkLine(models.Model):
             rec.write({'state': 'done'})
             if not rec.date_end:
                 rec.date_end = fields.Datetime.now()
+        # Begitu satu tahap Done, tombol Mulai di tahap berikutnya (can_start)
+        # dan tombol Ajukan Validasi di header OK perlu ikut berubah. Klien
+        # Odoo 10 cuma me-refresh baris yang diklik, bukan baris lain / header,
+        # jadi form OK dibuka ulang supaya langsung ter-update tanpa F5.
+        if len(self.mapped('ok_id')) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'lpj.production.ok',
+                'view_type': 'form',
+                'view_mode': 'form',
+                'res_id': self.mapped('ok_id').id,
+                'target': 'current',
+            }
         return True
 
     @api.multi
     def write(self, vals):
+        if vals.get('state') == 'in_progress':
+            self.filtered(lambda r: r.state != 'in_progress')._check_ready_to_start(vals)
         if vals.get('state') == 'done':
+            self._check_result_filled()
             for rec in self:
                 if not rec._qc_required_and_cleared():
                     raise UserError(_(
                         "Tidak bisa menandai tahap '%s' selesai -- checklist QC "
-                        "untuk kategori tahapan ini masih ada aktivitas yang "
+                        "untuk kategori proses ini masih ada aktivitas yang "
                         "belum dikonfirmasi. Isi & konfirmasi checklist-nya dulu."
                     ) % (rec.workcenter_group_id.name or '-'))
         res = super(ProductionOkLine, self).write(vals)
-        if vals.get('state') == 'done':
+        if 'meter_lari' in vals:
             for rec in self:
-                remaining = rec.ok_id.ok_line_ids.filtered(lambda l: l.state != 'done')
-                # PENTING: begitu semua baris Done, OK pindah ke "Menunggu
-                # Validasi SPV" -- BUKAN langsung Done. Supervisor/Manager
-                # harus klik "Validasi & Selesaikan" (action_validate_done)
-                # dulu sebelum stock.picking dibuat.
-                if not remaining and rec.ok_id.state == 'in_progress':
-                    rec.ok_id.action_request_validation()
+                if not rec.qty_pcs:
+                    qty = rec._calc_qty_pcs_from_meter()
+                    if qty:
+                        rec.qty_pcs = qty
+        # PENTING -- SENGAJA TIDAK auto-pindah ke "Menunggu Validasi SPV" di
+        # sini lagi begitu baris terakhir Done. OK header tetap di
+        # 'in_progress'; tombol 'Ajukan Validasi' di header (lihat
+        # all_lines_done & action_request_validation) yang baru MUNCUL
+        # setelah semua baris Done, dan PIC/SPV yang klik tombol itu secara
+        # sadar -- bukan auto-skip tanpa ada yang lihat/konfirmasi dulu.
         return res
 
     @api.multi
@@ -598,7 +898,7 @@ class ProductionOkLine(models.Model):
         ada draft yang belum selesai, lanjutkan draft itu. Cuma kalau
         benar-benar belum pernah ada checklist sama sekali, baru dibuatkan
         baru (auto-populate aktivitas dari master lpj.qc.item.template
-        sesuai KATEGORI tahapan baris ini). Tidak perlu menunggu mesin
+        sesuai KATEGORI proses baris ini). Tidak perlu menunggu mesin
         dipilih dulu -- aktivitas QC bersumber dari kategori
         (workcenter_group_id), yang sudah pasti terisi sejak baris ini
         dibuat dari Master Routing."""

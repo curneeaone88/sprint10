@@ -4,8 +4,9 @@ from odoo import models, fields, api
 
 class MrpWorkcenter(models.Model):
     """mrp.workcenter dipakai sebagai master mesin fisik individual
-    (Master Mesin), dikaitkan ke kategori tahapan (lpj.workcenter.group)
-    lewat x_workcenter_group_id.
+    (Master Mesin), dikaitkan ke kategori proses (lpj.workcenter.group)
+    lewat x_workcenter_group_ids (Many2many: satu mesin bisa
+    punya banyak kategori proses, mis. mesin yang bisa Cetak sekaligus Laminasi).
 
     Checklist QC TIDAK menempel di sini -- ada di level kategori
     (lpj.workcenter.group), supaya tidak perlu isi ulang aktivitas QC yang
@@ -16,11 +17,15 @@ class MrpWorkcenter(models.Model):
     """
     _inherit = 'mrp.workcenter'
 
-    x_workcenter_group_id = fields.Many2one(
-        'lpj.workcenter.group', string='Kategori Tahapan',
-        help="Kategori tahapan mesin ini, mis. Mesin Cetak 1 -> kategori Cetak. "
-             "Dipakai sebagai domain filter saat PPIC memilih mesin di OK, dan "
-             "menentukan aktivitas QC yang berlaku (lihat lpj.workcenter.group).")
+    x_workcenter_group_ids = fields.Many2many(
+        'lpj.workcenter.group', 'lpj_workcenter_group_mrp_workcenter_rel',
+        'workcenter_id', 'group_id', string='Kategori Proses',
+        help="Kategori proses yang bisa dikerjakan mesin ini. Satu mesin boleh "
+             "punya BANYAK kategori (mis. Cetak dan Laminasi), tidak terikat "
+             "ke satu kategori saja. Dipakai sebagai domain filter saat PPIC "
+             "memilih mesin di OK: mesin muncul untuk setiap kategori proses "
+             "yang dicentang di sini. Aktivitas QC mengikuti kategori proses "
+             "baris Routing, bukan mesinnya (lihat lpj.workcenter.group).")
     x_code = fields.Char(string='Kode Mesin')
     x_description = fields.Text(string='Deskripsi')
     x_capacity_qty = fields.Float(string='Kapasitas')

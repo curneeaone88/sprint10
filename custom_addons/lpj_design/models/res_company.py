@@ -37,6 +37,6 @@ class ResConfigSettings(models.TransientModel):
     @api.multi
     def set_x_allow_negative_stock_production(self):
         for rec in self:
-            self.env.user.company_id.write({
+            self.env.user.company_id.sudo().write({
                 'x_allow_negative_stock_production': rec.x_allow_negative_stock_production,
             })

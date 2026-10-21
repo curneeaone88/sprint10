@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Kanban Desain sederhana: satu kartu = satu item SO yang punya SQ.
+        Kolom: Outstanding, Sedang Dikerjakan, Selesai. Status TIDAK bisa
+        digeser dengan drag and drop (ditolak di server, lihat
+        models/sale_order_design.py), hanya lewat tombol di kartu supaya
+        kelengkapan data diperiksa dulu sebelum Selesai.
+    -->
+
+    <record id="view_design_status_kanban" model="ir.ui.view">
+        <field name="name">sale.order.line.design.kanban</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="x_design_status" create="false"
+                    group_create="false" group_edit="false" group_delete="false"
+                    quick_create="false" class="o_kanban_small_column">
+                <field name="x_design_status"/>
+                <field name="order_id"/>
+                <field name="x_design_customer_id"/>
+                <field name="product_id"/>
+                <field name="x_sq"/>
+                <field name="product_uom_qty"/>
+                <field name="x_duedate_kirim"/>
+                <field name="x_design_missing"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card" style="padding: 10px 12px;">
+                            <div style="font-weight: 700;">
+                                <field name="product_id"/>
+                            </div>
+                            <div style="font-size: 12px; color: #666;">
+                                <field name="order_id"/> | <field name="x_design_customer_id"/>
+                            </div>
+                            <div t-if="record.x_sq.raw_value" style="font-size: 12px; color: #666;">
+                                SQ: <field name="x_sq"/>
+                            </div>
+                            <div style="font-size: 12px; color: #666;">
+                                Qty: <field name="product_uom_qty"/>
+                                <span t-if="record.x_duedate_kirim.raw_value"> | Duedate: <field name="x_duedate_kirim"/></span>
+                            </div>
+                            <div t-if="record.x_design_status.raw_value != 'done' &amp;&amp; record.x_design_missing.raw_value"
+                                 style="margin-top: 6px;">
+                                <span class="label label-warning">Belum lengkap: <field name="x_design_missing"/></span>
+                            </div>
+                            <div t-if="record.x_design_status.raw_value == 'done'" style="margin-top: 6px;">
+                                <span class="label label-success">Data lengkap</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <button t-if="record.x_design_status.raw_value == 'outstanding'"
+                                        name="action_design_start" type="object"
+                                        class="btn btn-sm btn-primary">
+                                    <i class="fa fa-play"/> Mulai
+                                </button>
+                                <button t-if="record.x_design_status.raw_value != 'done'"
+                                        name="action_design_open_product" type="object"
+                                        class="btn btn-sm btn-default">
+                                    <i class="fa fa-pencil"/> Buka Master Produk
+                                </button>
+                                <button t-if="record.x_design_status.raw_value == 'in_progress'"
+                                        name="action_design_done" type="object"
+                                        class="btn btn-sm btn-success">
+                                    <i class="fa fa-check"/> Selesai
+                                </button>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_design_status_tree" model="ir.ui.view">
+        <field name="name">sale.order.line.design.tree</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <tree create="false" edit="false"
+                  decoration-success="x_design_status=='done'"
+                  decoration-info="x_design_status=='in_progress'">
+                <field name="order_id" string="SO Number"/>
+                <field name="x_design_customer_id"/>
+                <field name="product_id"/>
+                <field name="x_sq"/>
+                <field name="product_uom_qty" string="Qty Order"/>
+                <field name="x_duedate_kirim" string="Duedate"/>
+                <field name="x_design_status"/>
+                <field name="x_design_missing"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_design_status_search" model="ir.ui.view">
+        <field name="name">sale.order.line.design.search</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="order_id" string="SO Number"/>
+                <field name="product_id"/>
+                <field name="x_design_customer_id"/>
+                <field name="x_sq"/>
+                <filter string="Belum Selesai" name="filter_not_done"
+                        domain="[('x_design_status', 'in', ['outstanding', 'in_progress'])]"/>
+                <filter string="Selesai" name="filter_done"
+                        domain="[('x_design_status', '=', 'done')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status Desain" name="group_status"
+                            context="{'group_by': 'x_design_status'}"/>
+                    <filter string="Customer" name="group_customer"
+                            context="{'group_by': 'x_design_customer_id'}"/>
+                    <filter string="Produk" name="group_product"
+                            context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_design_status" model="ir.actions.act_window">
+        <field name="name">Status Desain Produk</field>
+        <field name="res_model">sale.order.line</field>
+        <field name="view_mode">kanban,tree</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_design_status_kanban')}),
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_design_status_tree')})]"/>
+        <field name="search_view_id" ref="view_design_status_search"/>
+        <field name="domain">[
+            ('x_design_status', '!=', 'na'),
+            ('order_id.state', 'in', ['sale', 'done'])
+        ]</field>
+        <field name="context">{'search_default_filter_not_done': 1}</field>
+        <field name="help">Item SO yang punya SQ dan perlu dilengkapi data produknya (Routing, Layout) oleh tim Desain sebelum bisa dibuatkan OK.</field>
+    </record>
+
+    <!-- Master Produk untuk tim Desain: melengkapi Routing, Layout, BOM, atau
+         menambah produk/bahan baku baru (yang dipakai di BOM). -->
+    <record id="action_design_product" model="ir.actions.act_window">
+        <field name="name">Master Produk</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">tree,form,kanban</field>
+        <field name="help">Master produk dan bahan baku. Tambahkan produk/bahan baru di sini bila belum ada, lalu lengkapi Routing, Layout, dan BOM-nya.</field>
+    </record>
+
+    <record id="action_design_product_category" model="ir.actions.act_window">
+        <field name="name">Kategori Produk</field>
+        <field name="res_model">product.category</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="action_design_uom" model="ir.actions.act_window">
+        <field name="name">Satuan (UoM)</field>
+        <field name="res_model">product.uom</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="action_design_uom_categ" model="ir.actions.act_window">
+        <field name="name">Kategori Satuan</field>
+        <field name="res_model">product.uom.categ</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+</odoo>

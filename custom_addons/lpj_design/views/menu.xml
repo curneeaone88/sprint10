@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_design_root" web_icon="lpj_design,static/description/icon.png" name="Desain" sequence="14"
+              groups="lpj_design.group_design_user"/>
+
+    <menuitem id="menu_design_status" name="Status Desain Produk"
+              parent="menu_design_root" action="action_design_status" sequence="5"/>
+
+    <menuitem id="menu_design_product_root" name="Product"
+              parent="menu_design_root" sequence="10"/>
+
+    <menuitem id="menu_design_product" name="Master Produk"
+              parent="menu_design_product_root" action="action_design_product" sequence="10"/>
+
+    <menuitem id="menu_design_product_category" name="Kategori Produk"
+              parent="menu_design_product_root" action="action_design_product_category" sequence="12"/>
+
+    <menuitem id="menu_design_uom" name="Satuan (UoM)"
+              parent="menu_design_product_root" action="action_design_uom" sequence="14"/>
+
+    <menuitem id="menu_design_uom_categ" name="Kategori Satuan"
+              parent="menu_design_product_root" action="action_design_uom_categ" sequence="16"/>
+
+    <menuitem id="menu_design_config" name="Konfigurasi"
+              parent="menu_design_root" sequence="90"/>
+
+    <menuitem id="menu_design_workcenter_group" name="Master Kategori Proses"
+              parent="menu_design_config" action="action_workcenter_group" sequence="10"/>
+
+    <menuitem id="menu_design_workcenter" name="Master Mesin"
+              parent="menu_design_config" action="action_mrp_workcenter_production" sequence="20"/>
+
+    <menuitem id="menu_design_routing" name="Master Routing"
+              parent="menu_design_config" action="action_lpj_routing" sequence="25"/>
+
+    <menuitem id="menu_design_qc_item_template" name="Master Aktivitas QC"
+              parent="menu_design_config" action="action_qc_item_template" sequence="30"/>
+
+    <menuitem id="menu_design_settings" name="Pengaturan Produksi"
+              parent="menu_design_config" action="action_production_settings" sequence="90"
+              groups="lpj_design.group_design_manager"/>
+
+</odoo>

@@ -7,7 +7,7 @@ class LpjRouting(models.Model):
 
     Kenapa custom: di mrp.routing.workcenter (bawaan Odoo) field
     workcenter_id WAJIB diisi mesin spesifik. Padahal yang kita mau di
-    level Master Routing cukup KATEGORI tahapan (lpj.workcenter.group) --
+    level Master Routing cukup KATEGORI proses (lpj.workcenter.group) --
     mesin spesifiknya baru dipilih PPIC/operator belakangan saat OK
     dibuat/dikonfirmasi, difilter sesuai kategori itu.
     """
@@ -45,7 +45,7 @@ class LpjRoutingLine(models.Model):
         'lpj.routing', string='Master Routing', required=True, ondelete='cascade')
     sequence = fields.Integer(string='Urutan', default=10)
     workcenter_group_id = fields.Many2one(
-        'lpj.workcenter.group', string='Kategori Tahapan', required=True,
+        'lpj.workcenter.group', string='Kategori Proses', required=True,
         help="Kategori mesin untuk Operation ini, mis. Cetak. Mesin spesifik "
              "(Master Mesin) dipilih PPIC/operator saat OK dibuat, difilter "
              "otomatis sesuai kategori ini.")

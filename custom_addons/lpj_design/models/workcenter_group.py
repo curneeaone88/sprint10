@@ -3,18 +3,18 @@ from odoo import models, fields, api
 
 
 class WorkcenterGroup(models.Model):
-    """Kategori/tag tahapan produksi. Dua fungsi:
-    1. Dipasang di tiap Master Mesin (mrp.workcenter.x_workcenter_group_id),
+    """Kategori/tag proses produksi. Dua fungsi:
+    1. Dipasang di tiap Master Mesin (mrp.workcenter.x_workcenter_group_ids, many2many),
        dipakai sebagai domain filter saat PPIC memilih mesin di OK.
     2. Tempat master aktivitas QC (lpj.qc.item.template) -- satu set aktivitas
        QC per kategori, dipakai bersama oleh semua mesin dengan kategori itu,
        supaya tidak perlu isi ulang checklist yang sama per mesin.
     """
     _name = 'lpj.workcenter.group'
-    _description = 'Kategori Tahapan Produksi'
+    _description = 'Kategori Proses Produksi'
     _order = 'sequence, id'
 
-    name = fields.Char(string='Nama Tahapan', required=True)
+    name = fields.Char(string='Nama Kategori Proses', required=True)
     code = fields.Char(string='Kode')
     sequence = fields.Integer(string='Urutan', default=10)
     active = fields.Boolean(default=True)
@@ -34,11 +34,13 @@ class WorkcenterGroup(models.Model):
             "cocok untuk tahap yang hasilnya memang dihitung per pcs langsung "
             "(mis. Packing) -- operator isi Qty Pcs manual, tidak lewat Meter Lari.")
 
-    workcenter_ids = fields.One2many(
-        'mrp.workcenter', 'x_workcenter_group_id', string='Mesin',
-        help="Mesin fisik (mrp.workcenter) dengan kategori ini -- inilah "
-             "daftar yang muncul saat PPIC memilih mesin untuk Operation "
-             "berkategori ini di OK.")
+    workcenter_ids = fields.Many2many(
+        'mrp.workcenter', 'lpj_workcenter_group_mrp_workcenter_rel',
+        'group_id', 'workcenter_id', string='Mesin',
+        help="Mesin fisik (mrp.workcenter) yang bisa mengerjakan kategori "
+             "proses ini -- inilah daftar yang muncul saat PPIC memilih mesin "
+             "untuk Operation berkategori ini di OK. Satu mesin bisa muncul "
+             "di banyak kategori.")
     workcenter_count = fields.Integer(compute='_compute_workcenter_count', string='Jumlah Mesin')
 
     qc_item_template_ids = fields.One2many(
@@ -59,11 +61,11 @@ class WorkcenterGroup(models.Model):
     @api.multi
     def action_view_workcenters(self):
         self.ensure_one()
-        action = self.env.ref('lpj_production.action_mrp_workcenter_production').read()[0]
-        action['domain'] = [('x_workcenter_group_id', '=', self.id)]
-        action['context'] = {'default_x_workcenter_group_id': self.id}
+        action = self.env.ref('lpj_design.action_mrp_workcenter_production').read()[0]
+        action['domain'] = [('x_workcenter_group_ids', 'in', [self.id])]
+        action['context'] = {'default_x_workcenter_group_ids': [(4, self.id)]}
         return action
 
     _sql_constraints = [
-        ('code_uniq', 'unique(code)', 'Kode tahapan sudah dipakai.'),
+        ('code_uniq', 'unique(code)', 'Kode kategori proses sudah dipakai.'),
     ]
