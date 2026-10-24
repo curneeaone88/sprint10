@@ -48,11 +48,11 @@
                             </div>
                             <div style="margin-top: 8px;">
                                 <button t-if="record.x_design_status.raw_value == 'outstanding'"
-                                        name="action_design_start" type="object"
+                                        name="action_design_open_product" type="object"
                                         class="btn btn-sm btn-primary">
                                     <i class="fa fa-play"/> Mulai
                                 </button>
-                                <button t-if="record.x_design_status.raw_value != 'done'"
+                                <button t-if="record.x_design_status.raw_value == 'in_progress'"
                                         name="action_design_open_product" type="object"
                                         class="btn btn-sm btn-default">
                                     <i class="fa fa-pencil"/> Buka Master Produk

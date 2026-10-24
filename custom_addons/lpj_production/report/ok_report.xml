@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="paperformat_ok_landscape" model="report.paperformat">
+        <field name="name">Perintah Kerja OK - A4 Landscape</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">7</field>
+        <field name="margin_bottom">7</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <report id="action_report_perintah_kerja"
+            model="lpj.production.ok"
+            string="Perintah Kerja (A4 Landscape)"
+            report_type="qweb-pdf"
+            name="lpj_production.report_perintah_kerja"
+            file="lpj_production.report_perintah_kerja"
+            paperformat="lpj_production.paperformat_ok_landscape"/>
+
+    <template id="report_perintah_kerja">
+        <t t-call="report.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="d" t-value="o.get_print_data()"/>
+                <div class="page okp" t-att-style="'page-break-after: always;' if not o_last else ''">
+                    <style>
+                        .okp, .okp table, .okp td, .okp th { font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #111; }
+                        .okp table { width: 99.5%; border-collapse: collapse; table-layout: fixed; margin: 0; }
+                        .okp td, .okp th { border: 1px solid #8a8a8a; padding: 2px 4px; vertical-align: middle; overflow: hidden; }
+                        .okp .bar { background: #1F3864; color: #fff; font-weight: bold; font-size: 9pt; padding: 2px 6px; margin-top: 3px; }
+                        .okp .lbl { background: #F2F2F2; font-weight: bold; }
+                        .okp .hd { background: #D9E2F3; font-weight: bold; text-align: center; }
+                        .okp .c { text-align: center; }
+                        .okp .grey { background: #EDEDED; }
+                        .okp .hint { font-size: 6pt; color: #666; font-style: italic; }
+                        .okp .big { font-size: 15pt; font-weight: bold; }
+                        .okp .title { font-size: 14pt; font-weight: bold; text-align: center; }
+                        .okp .sig { height: 46px; vertical-align: bottom; color: #888; font-size: 7pt; }
+                        .okp .rowh { height: 32px; }
+                        .okp .qrow { height: 19px; }
+                        .okp .foot { text-align: center; font-size: 7pt; color: #777; margin-top: 3px; }
+                    </style>
+
+                    <!-- Kepala -->
+                    <table>
+                        <tr>
+                            <td style="width: 24%;"><b style="font-size: 10pt;">PT SUKSES PRINTNUSA INDONESIA</b><br/><span class="hint">Sprint - Digital Printing</span></td>
+                            <td style="width: 50%;"><div class="title">PERINTAH KERJA (ORDER KERJA)</div><div class="c hint">Lembar kerja produksi dan laporan harian manual</div></td>
+                            <td style="width: 26%;"><span class="hint">No. OK</span><br/><span class="big" t-esc="o.name"/></td>
+                        </tr>
+                    </table>
+
+                    <!-- A. Informasi order -->
+                    <div class="bar">A. INFORMASI ORDER DAN DATA FORM</div>
+                    <table>
+                        <colgroup>
+                            <col style="width: 9%;"/><col style="width: 15%;"/><col style="width: 9%;"/><col style="width: 15%;"/>
+                            <col style="width: 9%;"/><col style="width: 15%;"/><col style="width: 9%;"/><col style="width: 19%;"/>
+                        </colgroup>
+                        <tr>
+                            <td class="lbl">Sales Order</td><td t-esc="d['so']"/>
+                            <td class="lbl">Customer</td><td t-esc="d['customer']"/>
+                            <td class="lbl">Source (SQ)</td><td t-esc="d['source']"/>
+                            <td class="lbl">Order Type</td><td t-esc="d['order_type']"/>
+                        </tr>
+                        <tr>
+                            <td class="lbl">Plan OK</td><td t-esc="d['plan_ok']"/>
+                            <td class="lbl">Duedate Kirim</td><td t-esc="d['duedate']"/>
+                            <td class="lbl">Responsible</td><td t-esc="d['responsible']"/>
+                            <td class="lbl">Tgl. Cetak</td><td t-esc="d['printed_at']"/>
+                        </tr>
+                        <tr>
+                            <td class="lbl">Produk</td><td colspan="3"><b t-esc="d['product']"/></td>
+                            <td class="lbl">Qty Plan</td><td><b t-esc="d['qty_plan']"/></td>
+                            <td class="lbl">M2 Plan</td><td t-esc="d['m2_plan']"/>
+                        </tr>
+                        <tr>
+                            <td class="lbl">Length (mm)</td><td t-esc="d['length']"/>
+                            <td class="lbl">Width (mm)</td><td t-esc="d['width']"/>
+                            <td class="lbl">Material</td><td t-esc="d['material']"/>
+                            <td class="lbl">Satuan</td><td t-esc="d['satuan']"/>
+                        </tr>
+                        <tr>
+                            <td class="lbl">Type Roll</td><td t-esc="d['type_roll']"/>
+                            <td class="lbl">Diecut</td><td t-esc="d['diecut']"/>
+                            <td class="lbl">Diecut Code</td><td t-esc="d['diecut_code']"/>
+                            <td class="lbl">Hotprint Code</td><td t-esc="d['hotprint_code']"/>
+                        </tr>
+                        <tr>
+                            <td class="lbl">Features</td><td colspan="3" t-esc="d['features']"/>
+                            <td class="lbl">Layout</td><td colspan="3"><b t-esc="d['layout']"/></td>
+                        </tr>
+                        <tr>
+                            <td class="lbl">Folder File Cetak</td><td colspan="7"><b t-esc="d['folder']"/></td>
+                        </tr>
+                    </table>
+
+                    <!-- B. Routing -->
+                    <div class="bar">B. ROUTING DAN HASIL TIAP PROSES (diisi tangan oleh operator)</div>
+                    <table>
+                        <colgroup>
+                            <col style="width: 3%;"/><col style="width: 12%;"/><col style="width: 11%;"/><col style="width: 11%;"/>
+                            <col style="width: 8%;"/><col style="width: 11%;"/><col style="width: 11%;"/><col style="width: 7%;"/>
+                            <col style="width: 7%;"/><col style="width: 7%;"/><col style="width: 5%;"/><col style="width: 7%;"/>
+                        </colgroup>
+                        <tr>
+                            <td class="hd">No</td><td class="hd">Kategori Proses</td><td class="hd">Mesin</td><td class="hd">Operator</td>
+                            <td class="hd">Plan Date</td><td class="hd">Start (tgl/jam)</td><td class="hd">End (tgl/jam)</td>
+                            <td class="hd">Meter Lari</td><td class="hd">Qty Pcs</td><td class="hd">QC</td><td class="hd">Paraf</td><td class="hd">Catatan</td>
+                        </tr>
+                        <t t-foreach="d['routing_rows']" t-as="r">
+                            <tr class="rowh">
+                                <td class="c" t-esc="r['no']"/>
+                                <td><b t-esc="r['name']" style="font-size: 9pt;"/><br/><span class="hint" t-esc="r['hint']"/></td>
+                                <td t-esc="r['machine']"/>
+                                <td t-esc="r['operator']"/>
+                                <td class="c" t-esc="r['plan_date']"/>
+                                <td></td>
+                                <td></td>
+                                <td t-att-class="'c' if r['meter_mode'] else 'c grey'"><t t-if="not r['meter_mode']">-</t></td>
+                                <td></td>
+                                <td class="c" style="font-size: 7pt;"><t t-if="r['qc']">[ ]OK [ ]Not OK</t><t t-if="not r['qc']">-</t></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </t>
+                    </table>
+                    <div class="hint">Proses wajib berurutan sesuai Master Routing. Meter Lari abu-abu = proses hanya input Qty Pcs. Qty Pcs proses bermode Meter Lari = (Meter Lari / Panjang layout) x Qty per layout.</div>
+
+                    <!-- C. QC -->
+                    <t t-if="d['qc_rows']">
+                        <div class="bar">C. CHECKLIST QC</div>
+                        <table>
+                            <colgroup>
+                                <col style="width: 9%;"/><col style="width: 31%;"/><col style="width: 4%;"/><col style="width: 5%;"/>
+                                <col style="width: 4%;"/><col style="width: 33%;"/><col style="width: 14%;"/>
+                            </colgroup>
+                            <tr>
+                                <td class="hd">Kategori Proses</td><td class="hd">Aktivitas QC</td><td class="hd">OK</td>
+                                <td class="hd">Not OK</td><td class="hd">N/A</td><td class="hd">Catatan</td><td class="hd">Paraf QC</td>
+                            </tr>
+                            <t t-foreach="d['qc_rows']" t-as="q">
+                                <tr class="qrow">
+                                    <td><b t-esc="q['group']"/></td>
+                                    <td t-esc="q['name']"/>
+                                    <td class="c">[ ]</td><td class="c">[ ]</td><td class="c">[ ]</td>
+                                    <td></td><td></td>
+                                </tr>
+                            </t>
+                        </table>
+                    </t>
+
+                    <!-- D. Hasil akhir -->
+                    <div class="bar">D. HASIL AKHIR OK</div>
+                    <table>
+                        <tr>
+                            <td class="hd">Total Meter Lari</td><td class="hd">M2 Production</td><td class="hd">Qty Production (pcs)</td>
+                            <td class="hd">Waste Bahan (m2)</td><td class="hd">Waste (%)</td>
+                        </tr>
+                        <tr style="height: 24px;"><td></td><td></td><td></td><td></td><td></td></tr>
+                    </table>
+
+                    <!-- E. Pengesahan -->
+                    <div class="bar">E. PENGESAHAN DAN CATATAN</div>
+                    <table>
+                        <tr>
+                            <td class="hd">Dibuat (PPIC)</td><td class="hd">Operator Produksi</td>
+                            <td class="hd">QC Inspector</td><td class="hd">Validasi SPV Produksi</td>
+                        </tr>
+                        <tr>
+                            <td class="sig">Nama / tanggal:</td><td class="sig">Nama / tanggal:</td>
+                            <td class="sig">Nama / tanggal:</td><td class="sig">Nama / tanggal:</td>
+                        </tr>
+                    </table>
+                    <div class="foot">Perintah Kerja <span t-esc="o.name"/> | Dicetak dari ERP | <span t-esc="d['printed_at']"/></div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+</odoo>

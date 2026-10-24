@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_production_settings_form_ok" model="ir.ui.view">
+        <field name="name">lpj.production.settings.form.ok</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="lpj_design.view_production_settings_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer" position="before">
+                <group string="Order Kerja (OK)">
+                    <field name="x_ok_ref_days"/>
+                    <div class="text-muted">
+                        Tanggal Referensi Kirim di OK = tanggal SO di-confirm + jumlah hari
+                        ini. Duedate Kirim OK default-nya sama dengan tanggal referensi,
+                        lalu bisa diubah oleh PPIC. Perubahan angka ini hanya berlaku untuk
+                        OK yang dibuat sesudahnya.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -26,7 +26,7 @@
     'website': "https://sprint.co.id",
 
     'category': 'Manufacturing',
-    'version': '1.3.2',
+    'version': '1.3.3',
 
     'depends': ['base', 'sale', 'product', 'stock', 'mrp', 'lpj_sales', 'lpj_product'],
 

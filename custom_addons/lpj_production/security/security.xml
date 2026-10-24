@@ -16,6 +16,14 @@
         <field name="implied_ids" eval="[(4, ref('lpj_product.group_produksi_user_readonly'))]"/>
     </record>
 
+    <!-- PPIC: satu-satunya (selain Supervisor & Manager) yang boleh mengubah
+         Duedate Kirim di OK. Otomatis punya hak Production User. -->
+    <record id="group_ppic" model="res.groups">
+        <field name="name">PPIC</field>
+        <field name="category_id" ref="lpj_product.module_category_produksi"/>
+        <field name="implied_ids" eval="[(4, ref('lpj_product.group_produksi_user'))]"/>
+    </record>
+
     <record id="production_ok_rule_user" model="ir.rule">
         <field name="name">OK: User hanya lihat OK miliknya / semua (read-only default)</field>
         <field name="model_id" ref="model_lpj_production_ok"/>

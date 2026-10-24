@@ -27,6 +27,8 @@
                             states="draft,confirmed,in_progress"/>
                     <button name="action_set_to_draft" type="object" string="Set to Draft"
                             states="cancel"/>
+                    <button name="action_print_perintah_kerja" type="object"
+                            string="Cetak Perintah Kerja" icon="fa-print"/>
                     <field name="all_lines_done" invisible="1"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,confirmed,in_progress,to_validate,done"/>
@@ -71,8 +73,12 @@
                         <group>
                             <field name="responsible_id"/>
                             <field name="plan_ok"/>
-                            <field name="duedate_kirim" readonly="1"/>
+                            <field name="x_ref_kirim"/>
+                            <field name="x_can_edit_duedate" invisible="1"/>
+                            <field name="duedate_kirim"
+                                   attrs="{'readonly': [('x_can_edit_duedate','=',False)]}"/>
                             <field name="source" readonly="1"/>
+                            <field name="x_folder_cetak" placeholder="Contoh: \\SERVER-CETAK\Produksi\2026\10\Customer\Job"/>
                             <field name="picking_id" readonly="1" attrs="{'invisible': [('picking_id','=',False)]}"/>
                             <field name="material_picking_id" readonly="1" attrs="{'invisible': [('material_picking_id','=',False)]}"/>
                         </group>
@@ -106,15 +112,16 @@
                                     <field name="workcenter_id"/>
                                     <field name="operator_id"/>
                                     <field name="plan_date"/>
-                                    <field name="date_start"/>
-                                    <field name="date_end"/>
+                                    <field name="x_can_edit_times" invisible="1"/>
+                                    <field name="date_start" attrs="{'readonly': [('x_can_edit_times','=',False)]}"/>
+                                    <field name="date_end" attrs="{'readonly': [('x_can_edit_times','=',False)]}"/>
                                     <field name="meter_lari"/>
                                     <field name="qty_pcs"/>
                                     <field name="notes"/>
-                                    <field name="state" widget="badge"
+                                    <field name="state"
                                            decoration-success="state=='done'"
                                            decoration-info="state=='in_progress'"/>
-                                    <field name="qc_status" widget="badge"
+                                    <field name="qc_status"
                                            decoration-success="qc_status=='ok'"
                                            decoration-danger="qc_status=='not_ok'"
                                            decoration-warning="qc_status=='pending'"
@@ -311,15 +318,26 @@
                 <field name="qty_plan"/>
                 <field name="qty_production"/>
                 <field name="state"/>
+                <field name="order_type"/>
+                <field name="duedate_kirim"/>
                 <templates>
                     <t t-name="kanban-box">
-                        <div t-attf-class="oe_kanban_card oe_kanban_global_click">
+                        <!-- Biru = Repeat, Kuning = New -->
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click"
+                             t-attf-style="border-left: 6px solid #{record.order_type.raw_value == 'repeat' ? '#2f80ed' : '#f2c200'}; background-color: #{record.order_type.raw_value == 'repeat' ? '#e3f0ff' : '#fff6cc'};">
                             <div class="oe_kanban_content">
                                 <strong><field name="name"/></strong>
+                                <span class="pull-right label"
+                                      t-attf-style="color: #fff; background-color: #{record.order_type.raw_value == 'repeat' ? '#2f80ed' : '#d9a400'};">
+                                    <field name="order_type"/>
+                                </span>
                                 <div><field name="partner_id"/></div>
                                 <div><field name="product_id"/></div>
                                 <div>
                                     <field name="qty_production"/> / <field name="qty_plan"/> pcs
+                                </div>
+                                <div t-if="record.duedate_kirim.raw_value">
+                                    <i class="fa fa-truck"/> Kirim: <field name="duedate_kirim" widget="date"/>
                                 </div>
                             </div>
                         </div>

@@ -31,7 +31,7 @@
     'website': "https://sprint.co.id",
 
     'category': 'Manufacturing',
-    'version': '1.4.2',
+    'version': '1.7',
 
     # mrp: reuse mrp.workcenter sebagai Master Mesin (bukan pakai alur MRP/MO,
     # dan bukan pakai mrp.routing -- Master Routing custom, lihat models/routing.py)
@@ -46,7 +46,9 @@
         'views/sale_order_view.xml',
         'views/planning_view.xml',
         'views/ok_shortage_wizard_view.xml',
+        'report/ok_report.xml',
         'views/report_view.xml',
+        'views/settings_view.xml',
         'views/menu.xml',
     ],
     'installable': True,

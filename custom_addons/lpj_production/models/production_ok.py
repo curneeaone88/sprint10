@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
@@ -131,12 +133,25 @@ class ProductionOk(models.Model):
     plan_ok = fields.Date(
         string='Plan OK',
         help="Rencana tanggal mulai produksi. WAJIB diisi sebelum OK di-Confirm.")
+    x_ref_kirim = fields.Date(
+        string='Tanggal Referensi Kirim', readonly=True, copy=False,
+        help="Tanggal SO di-confirm + jumlah hari standar (Pengaturan "
+             "Produksi). Dihitung sekali saat OK dibuat, tidak berubah kalau "
+             "setting hari diubah belakangan. Jadi acuan awal Duedate Kirim.")
     duedate_kirim = fields.Datetime(
-        string='Duedate Kirim', related='sale_order_line_id.x_duedate_kirim',
-        store=True, readonly=True)
+        string='Duedate Kirim', copy=False,
+        help="Default = Tanggal Referensi Kirim. Hanya PPIC / Supervisor / "
+             "Manager yang boleh mengubah.")
+    x_can_edit_duedate = fields.Boolean(
+        string='Boleh Edit Duedate', compute='_compute_can_edit_duedate')
     responsible_id = fields.Many2one(
         'res.users', string='Responsible', default=lambda self: self.env.user)
     notes = fields.Text(string='Notes')
+    x_folder_cetak = fields.Char(
+        string='Folder File Cetak',
+        help="Lokasi folder file cetak/artwork untuk job ini, diisi tim "
+             "Desain atau PPIC. Ikut tercetak di lembar Perintah Kerja. "
+             "Contoh: \\\\SERVER-CETAK\\Produksi\\2026\\10\\NAMA CUSTOMER\\nama job")
 
     # ==== Status ====
     # to_validate: semua baris Routing sudah Done, TAPI belum otomatis jadi
@@ -308,7 +323,38 @@ class ProductionOk(models.Model):
         return res
 
     @api.multi
+    def _compute_can_edit_duedate(self):
+        ok = self._user_can_edit_duedate()
+        for rec in self:
+            rec.x_can_edit_duedate = ok
+
+    @api.model
+    def _user_can_edit_duedate(self):
+        u = self.env.user
+        return bool(self.env.uid == 1 or
+                    u.has_group('lpj_production.group_ppic') or
+                    u.has_group('lpj_product.group_produksi_supervisor') or
+                    u.has_group('lpj_product.group_produksi_manager'))
+
+    @api.model
+    def _calc_ref_kirim(self, sale_order):
+        """SO confirm date + hari standar (res.company.x_ok_ref_days)."""
+        days = self.env.user.company_id.x_ok_ref_days or 0
+        base = None
+        conf = getattr(sale_order, 'confirmation_date', False) or \
+            (sale_order and sale_order.date_order)
+        if conf:
+            base = fields.Datetime.from_string(conf)
+            base = fields.Datetime.context_timestamp(self, base).date()
+        else:
+            base = fields.Date.from_string(fields.Date.context_today(self))
+        return fields.Date.to_string(base + timedelta(days=days))
+
+    @api.multi
     def write(self, vals):
+        if 'duedate_kirim' in vals and not self._user_can_edit_duedate():
+            raise UserError(_(
+                "Duedate Kirim hanya boleh diubah oleh PPIC, Supervisor atau Manager."))
         if vals.get('state') == 'done':
             vals = dict(vals, date_done=fields.Datetime.now())
         elif vals.get('state') and vals['state'] != 'done':
@@ -369,6 +415,12 @@ class ProductionOk(models.Model):
             if not vals.get('qty_plan'):
                 vals['qty_plan'] = sol.product_uom_qty
 
+            # Tanggal Referensi Kirim & default Duedate Kirim
+            if not vals.get('x_ref_kirim'):
+                vals['x_ref_kirim'] = self._calc_ref_kirim(sol.order_id)
+            if not vals.get('duedate_kirim'):
+                vals['duedate_kirim'] = vals['x_ref_kirim'] + ' 00:00:00'
+
         record = super(ProductionOk, self).create(vals)
         return record
 
@@ -391,6 +443,10 @@ class ProductionOk(models.Model):
                 raise UserError(_(
                     "Routing belum diisi -- pilih Master Routing, atau isi "
                     "tabel Routing secara manual, sebelum OK ini bisa di-Confirm."))
+            # Plan Date tiap baris routing default = Plan OK (yang sudah
+            # diisi manual per baris tidak ditimpa).
+            rec.ok_line_ids.filtered(lambda l: not l.plan_date).write(
+                {'plan_date': rec.plan_ok})
             rec.state = 'confirmed'
         return True
 
@@ -536,6 +592,117 @@ class ProductionOk(models.Model):
         action['context'] = {'default_ok_id': self.id}
         return action
 
+    # ==== Cetak Perintah Kerja (A4 landscape, lihat report/ok_report.xml) ====
+    @api.model
+    def _fmt_num(self, val, dec=0):
+        """Angka format Indonesia: titik ribuan, koma desimal."""
+        val = val or 0.0
+        txt = ('{:,.%df}' % dec).format(val)
+        return txt.replace(',', '#').replace('.', ',').replace('#', '.')
+
+    @api.model
+    def _fmt_trim(self, val):
+        """Angka tanpa nol di belakang koma (40.0 -> 40, 2.5 -> 2,5)."""
+        val = val or 0.0
+        if abs(val - round(val)) < 0.00001:
+            return self._fmt_num(val, 0)
+        return self._fmt_num(val, 2).rstrip('0').rstrip(',')
+
+    @api.model
+    def _fmt_date(self, value, with_time=False):
+        if not value:
+            return ''
+        if with_time:
+            dt = fields.Datetime.context_timestamp(
+                self, fields.Datetime.from_string(value))
+            return dt.strftime('%d-%m-%Y %H:%M')
+        return fields.Date.from_string(value).strftime('%d-%m-%Y')
+
+    @api.multi
+    def get_print_data(self):
+        """Semua data lembar Perintah Kerja dalam satu dict supaya template
+        QWeb tetap sederhana."""
+        self.ensure_one()
+        from datetime import datetime
+        satuan = dict(self._fields['x_satuan'].selection).get(self.x_satuan, '') \
+            if self.x_satuan else ''
+        order_type = dict(self._fields['order_type'].selection).get(self.order_type, '')
+        features = u', '.join([f.display_name for f in self.x_feature_ids])
+        layout = ''
+        if self.x_layout_qty_pcs or self.x_layout_width or self.x_layout_length:
+            layout = u'%s pcs/layout | Lebar %s mm | Panjang %s mm' % (
+                self._fmt_trim(self.x_layout_qty_pcs),
+                self._fmt_trim(self.x_layout_width),
+                self._fmt_trim(self.x_layout_length))
+        info = {
+            'printed_at': fields.Datetime.context_timestamp(
+                self, datetime.now()).strftime('%d-%m-%Y %H:%M'),
+            'so': self.sale_order_id.name or '',
+            'customer': self.partner_id.name or '',
+            'source': self.source or '',
+            'order_type': order_type,
+            'plan_ok': self._fmt_date(self.plan_ok),
+            'duedate': self._fmt_date(self.duedate_kirim, True),
+            'responsible': self.responsible_id.name or '',
+            'product': self.product_id.display_name or '',
+            'qty_plan': (self._fmt_trim(self.qty_plan) + ' pcs') if self.qty_plan else '',
+            'm2_plan': (self._fmt_num(self.m2_plan, 2) + ' m2') if self.m2_plan else '',
+            'length': self._fmt_trim(self.x_length) if self.x_length else '',
+            'width': self._fmt_trim(self.x_width) if self.x_width else '',
+            'material': self.x_material_id.display_name or '',
+            'satuan': satuan,
+            'type_roll': self.x_type_roll_id.display_name or '',
+            'diecut': self.x_diecut_id.display_name or '',
+            'diecut_code': self.x_diecut_code or '',
+            'hotprint_code': self.x_hotprint_code or '',
+            'features': features,
+            'layout': layout,
+            'folder': self.x_folder_cetak or '',
+            'routing_rows': [],
+            'qc_rows': [],
+        }
+        lines = self.ok_line_ids.sorted(key=lambda l: (l.sequence, l.id))
+        seen_groups = set()
+        if lines:
+            for i, l in enumerate(lines, 1):
+                group = l.workcenter_group_id
+                meter_mode = (group.x_input_mode == 'meter_lari')
+                info['routing_rows'].append({
+                    'no': i, 'name': group.name or '',
+                    'hint': u'Input: Meter Lari -> Pcs otomatis' if meter_mode else u'Input: Qty Pcs',
+                    'machine': l.workcenter_id.name or '',
+                    'operator': l.operator_id.name or '',
+                    'plan_date': self._fmt_date(l.plan_date),
+                    'meter_mode': meter_mode,
+                    'qc': bool(group.qc_item_template_ids),
+                })
+                if group.id not in seen_groups:
+                    seen_groups.add(group.id)
+                    for t in group.qc_item_template_ids.sorted(key=lambda t: (t.sequence, t.id)):
+                        info['qc_rows'].append({'group': group.name or '', 'name': t.name})
+        elif self.routing_id:
+            # OK masih Draft: baris routing belum dibuat, pakai master routing
+            for i, rl in enumerate(self.routing_id.line_ids.sorted(key=lambda l: (l.sequence, l.id)), 1):
+                group = rl.workcenter_group_id
+                meter_mode = (group.x_input_mode == 'meter_lari')
+                info['routing_rows'].append({
+                    'no': i, 'name': group.name or '',
+                    'hint': u'Input: Meter Lari -> Pcs otomatis' if meter_mode else u'Input: Qty Pcs',
+                    'machine': '', 'operator': '', 'plan_date': '',
+                    'meter_mode': meter_mode, 'qc': bool(group.qc_item_template_ids),
+                })
+                if group.id not in seen_groups:
+                    seen_groups.add(group.id)
+                    for t in group.qc_item_template_ids.sorted(key=lambda t: (t.sequence, t.id)):
+                        info['qc_rows'].append({'group': group.name or '', 'name': t.name})
+        return info
+
+    @api.multi
+    def action_print_perintah_kerja(self):
+        """Cetak lembar Perintah Kerja (A4 landscape, 1 halaman per OK)."""
+        return self.env['report'].get_action(
+            self, 'lpj_production.report_perintah_kerja')
+
     @api.multi
     def action_view_followup_ok(self):
         self.ensure_one()
@@ -580,6 +747,33 @@ class ProductionOkLine(models.Model):
     plan_date = fields.Date(string='Plan Date')
     date_start = fields.Datetime(string='Start (date & hours)')
     date_end = fields.Datetime(string='End (date & hours)')
+    x_can_edit_times = fields.Boolean(
+        string='Boleh Edit Start/End', compute='_compute_can_edit_times')
+
+    @api.multi
+    def _compute_can_edit_times(self):
+        ok = self._user_can_edit_times()
+        for rec in self:
+            rec.x_can_edit_times = ok
+
+    @api.model
+    def _user_can_edit_times(self):
+        """Start/End manual hanya PPIC, Supervisor, Manager Produksi.
+        Operator tetap bisa lewat tombol Mulai/Selesai (otomatis)."""
+        u = self.env.user
+        return bool(self.env.uid == 1 or
+                    u.has_group('lpj_production.group_ppic') or
+                    u.has_group('lpj_product.group_produksi_supervisor') or
+                    u.has_group('lpj_product.group_produksi_manager'))
+
+    @api.constrains('date_start', 'date_end')
+    def _check_end_after_start(self):
+        for rec in self:
+            if rec.date_start and rec.date_end and rec.date_end <= rec.date_start:
+                raise UserError(_(
+                    "Tahap '%s': End harus lebih besar dari Start. "
+                    "Periksa kembali tanggal & jam yang diisi.")
+                    % (rec.workcenter_group_id.name or '-'))
 
     meter_lari = fields.Float(
         string='Meter Lari',
@@ -808,7 +1002,8 @@ class ProductionOkLine(models.Model):
                 rec._check_ready_to_start()
                 rec.write({'state': 'in_progress'})
                 if not rec.date_start:
-                    rec.date_start = fields.Datetime.now()
+                    rec.with_context(line_times_internal=True).write(
+                        {'date_start': fields.Datetime.now()})
             if rec.ok_id.state == 'confirmed':
                 rec.ok_id.action_start()
         return True
@@ -847,7 +1042,8 @@ class ProductionOkLine(models.Model):
         for rec in self:
             rec.write({'state': 'done'})
             if not rec.date_end:
-                rec.date_end = fields.Datetime.now()
+                rec.with_context(line_times_internal=True).write(
+                    {'date_end': fields.Datetime.now()})
         # Begitu satu tahap Done, tombol Mulai di tahap berikutnya (can_start)
         # dan tombol Ajukan Validasi di header OK perlu ikut berubah. Klien
         # Odoo 10 cuma me-refresh baris yang diklik, bukan baris lain / header,
@@ -865,6 +1061,12 @@ class ProductionOkLine(models.Model):
 
     @api.multi
     def write(self, vals):
+        if ('date_start' in vals or 'date_end' in vals) and \
+                not self.env.context.get('line_times_internal') and \
+                not self._user_can_edit_times():
+            raise UserError(_(
+                "Start / End hanya boleh diubah manual oleh PPIC, "
+                "Supervisor atau Manager Produksi."))
         if vals.get('state') == 'in_progress':
             self.filtered(lambda r: r.state != 'in_progress')._check_ready_to_start(vals)
         if vals.get('state') == 'done':
