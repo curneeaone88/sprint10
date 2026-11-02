@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Papan Operator: kartu = OK Line (tahap proses), kolom = Mesin.
+        - "Tugas Saya": hanya baris yang Operator-nya = user yang login.
+        - "Semua Proses per Mesin": semua baris aktif, untuk Supervisor/Manager/PPIC.
+        Hanya tahap yang OK-nya sudah Confirmed / In Progress dan tahapnya belum Done.
+    -->
+
+    <record id="view_ok_line_operator_kanban" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.operator.kanban</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_operator_board" create="false" quick_create="false">
+                <field name="ok_id"/>
+                <field name="ok_qty_plan"/>
+                <field name="ok_order_type"/>
+                <field name="workcenter_group_id"/>
+                <field name="workcenter_id"/>
+                <field name="operator_id"/>
+                <field name="plan_date"/>
+                <field name="meter_lari"/>
+                <field name="qty_pcs"/>
+                <field name="state"/>
+                <field name="qc_status"/>
+                <field name="qc_required"/>
+                <field name="can_start"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card op_card"
+                             t-attf-style="border-left: 6px solid #{record.ok_order_type.raw_value == 'repeat' ? '#2f80ed' : '#f2c200'};">
+                            <div class="op_title">
+                                <field name="workcenter_group_id"/>
+                                <span class="pull-right label label-primary" t-if="record.workcenter_id.raw_value"><i class="fa fa-cogs"/> <field name="workcenter_id"/></span>
+                            </div>
+                            <div class="op_ok"><strong><field name="ok_id"/></strong></div>
+                            <div class="op_info">
+                                Plan: <field name="ok_qty_plan"/> pcs
+                                <span t-if="record.plan_date.raw_value"> | Tgl: <field name="plan_date"/></span>
+                            </div>
+                            <div t-if="record.operator_id.raw_value" class="op_info">
+                                <i class="fa fa-user"/> <field name="operator_id"/>
+                            </div>
+                            <div t-if="record.meter_lari.raw_value || record.qty_pcs.raw_value" class="op_info">
+                                <span t-if="record.meter_lari.raw_value"><field name="meter_lari"/> m lari</span>
+                                <span t-if="record.qty_pcs.raw_value"> <field name="qty_pcs"/> pcs</span>
+                            </div>
+                            <div style="margin: 6px 0;">
+                                <span class="label label-warning" t-if="record.qc_required.raw_value &amp;&amp; record.state.raw_value == 'in_progress' &amp;&amp; record.qc_status.raw_value != 'ok' &amp;&amp; record.qc_status.raw_value != 'not_ok'">QC belum</span>
+                                <span class="label label-success" t-if="record.qc_status.raw_value == 'ok'">QC OK</span>
+                                <span class="label label-danger" t-if="record.qc_status.raw_value == 'not_ok'">QC Not OK</span>
+                                <span class="label label-warning" t-if="record.state.raw_value == 'draft' &amp;&amp; !record.can_start.raw_value">Menunggu tahap sebelumnya</span>
+                            </div>
+                            <div>
+                                <button name="action_view_ok_popup" type="object" class="op_btn btn btn-block btn-lg btn-default">
+                                    <i class="fa fa-eye"/> Lihat OK
+                                </button>
+                            </div>
+                            <div t-if="record.state.raw_value == 'draft' &amp;&amp; record.can_start.raw_value">
+                                <button name="action_start_line" type="object" class="op_btn btn btn-block btn-lg btn-primary">
+                                    <i class="fa fa-play"/> Mulai
+                                </button>
+                            </div>
+                            <div t-if="record.state.raw_value == 'in_progress'">
+                                <button name="action_open_result_form" type="object" class="op_btn btn btn-block btn-lg btn-default">
+                                    <i class="fa fa-pencil"/> Input Hasil (Meter Lari / Qty Pcs)
+                                </button>
+                            </div>
+                            <div t-if="record.state.raw_value == 'in_progress' &amp;&amp; record.qc_required.raw_value &amp;&amp; record.qc_status.raw_value != 'ok' &amp;&amp; record.qc_status.raw_value != 'not_ok'">
+                                <button name="action_open_qc_checklist" type="object" class="op_btn btn btn-block btn-lg btn-warning">
+                                    <i class="fa fa-check-square-o"/> Isi Checklist QC
+                                </button>
+                            </div>
+                            <div t-if="record.state.raw_value == 'in_progress' &amp;&amp; (!record.qc_required.raw_value || record.qc_status.raw_value == 'ok' || record.qc_status.raw_value == 'not_ok')">
+                                <button name="action_done_line" type="object" class="op_btn btn btn-block btn-lg btn-success">
+                                    <i class="fa fa-check"/> Selesai
+                                </button>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_ok_line_operator_search" model="ir.ui.view">
+        <field name="name">lpj.production.ok.line.operator.search</field>
+        <field name="model">lpj.production.ok.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="ok_id"/>
+                <field name="workcenter_id"/>
+                <field name="operator_id"/>
+                <filter string="Sedang Dikerjakan" name="f_progress" domain="[('state','=','in_progress')]"/>
+                <filter string="Belum Dimulai" name="f_draft" domain="[('state','=','draft')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="g_state" context="{'group_by':'state'}"/>
+                    <filter string="Mesin" name="g_machine" context="{'group_by':'workcenter_id'}"/>
+                    <filter string="Operator" name="g_operator" context="{'group_by':'operator_id'}"/>
+                    <filter string="Kategori Proses" name="g_group" context="{'group_by':'workcenter_group_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_operator_board_mine" model="ir.actions.act_window">
+        <field name="name">Tugas Saya</field>
+        <field name="res_model">lpj.production.ok.line</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_ok_line_operator_kanban"/>
+        <field name="search_view_id" ref="view_ok_line_operator_search"/>
+        <field name="domain">['|', ('state', 'in', ['draft', 'in_progress']),
+                              ('date_end', '&gt;=', (context_today() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')),
+                              ('ok_id.state', 'in', ['confirmed', 'in_progress', 'to_validate']),
+                              ('operator_id', '=', uid)]</field>
+        <field name="context">{'operator_board': 1}</field>
+        <field name="help">Tahap proses yang ditugaskan ke Anda (kolom per status, nama mesin di tiap kartu). Kalau kosong, minta PPIC mengisi kolom Operator di OK.</field>
+    </record>
+
+    <record id="action_operator_board_all" model="ir.actions.act_window">
+        <field name="name">Semua Proses per Mesin</field>
+        <field name="res_model">lpj.production.ok.line</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_ok_line_operator_kanban"/>
+        <field name="search_view_id" ref="view_ok_line_operator_search"/>
+        <field name="domain">['|', ('state', 'in', ['draft', 'in_progress']),
+                              ('date_end', '&gt;=', (context_today() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')),
+                              ('ok_id.state', 'in', ['confirmed', 'in_progress', 'to_validate'])]</field>
+        <field name="context">{'operator_board': 1}</field>
+    </record>
+</odoo>

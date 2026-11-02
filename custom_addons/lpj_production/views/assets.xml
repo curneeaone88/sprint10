@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="assets_backend_operator" name="lpj_production operator assets" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <link rel="stylesheet" href="/lpj_production/static/src/css/operator.css"/>
+        </xpath>
+    </template>
+</odoo>

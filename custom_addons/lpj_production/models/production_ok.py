@@ -747,8 +747,40 @@ class ProductionOkLine(models.Model):
     plan_date = fields.Date(string='Plan Date')
     date_start = fields.Datetime(string='Start (date & hours)')
     date_end = fields.Datetime(string='End (date & hours)')
+    ok_partner_id = fields.Many2one(
+        'res.partner', related='ok_id.partner_id', string='Customer', readonly=True)
+    ok_product_id = fields.Many2one(
+        'product.product', related='ok_id.product_id', string='Product', readonly=True)
+    ok_qty_plan = fields.Float(related='ok_id.qty_plan', string='Qty Plan', readonly=True)
+    ok_duedate = fields.Datetime(related='ok_id.duedate_kirim', string='Duedate Kirim', readonly=True)
+    ok_order_type = fields.Selection(related='ok_id.order_type', string='Order Type', readonly=True)
     x_can_edit_times = fields.Boolean(
         string='Boleh Edit Start/End', compute='_compute_can_edit_times')
+
+    @api.model
+    def read_group(self, domain, fields, groupby, offset=0, limit=None,
+                   orderby=False, lazy=True):
+        """Kolom Kanban Papan Operator berurutan Draft, In Progress, Done
+        dan selalu tampil walau kosong."""
+        res = super(ProductionOkLine, self).read_group(
+            domain, fields, groupby, offset=offset, limit=limit,
+            orderby=orderby, lazy=lazy)
+        first = groupby[0] if isinstance(groupby, (list, tuple)) and groupby else groupby
+        if first == 'state' and self.env.context.get('operator_board'):
+            states = [k for k, _l in self._fields['state'].selection]
+            present = set(g.get('state') for g in res)
+            if lazy or len(groupby) == 1:
+                for key in states:
+                    if key not in present:
+                        res.append({
+                            'state': key,
+                            'state_count': 0,
+                            '__domain': [('state', '=', key)] + list(domain),
+                            '__context': {'group_by': list(groupby[1:])},
+                        })
+            res = sorted(res, key=lambda g: states.index(g.get('state'))
+                         if g.get('state') in states else len(states))
+        return res
 
     @api.multi
     def _compute_can_edit_times(self):
@@ -1000,7 +1032,7 @@ class ProductionOkLine(models.Model):
                     "sebelumnya sesuai urutan Routing.") % (rec.workcenter_group_id.name or '-'))
             if rec.state == 'draft':
                 rec._check_ready_to_start()
-                rec.write({'state': 'in_progress'})
+                rec.with_context(line_internal=True).write({'state': 'in_progress'})
                 if not rec.date_start:
                     rec.with_context(line_times_internal=True).write(
                         {'date_start': fields.Datetime.now()})
@@ -1024,7 +1056,32 @@ class ProductionOkLine(models.Model):
             'views': [(view.id, 'form')],
             'res_id': self.id,
             'target': 'new',
+            'context': dict(self.env.context),
         }
+
+    @api.multi
+    def action_view_ok_popup(self):
+        """Operator lihat seluruh OK (view only) dalam popup."""
+        self.ensure_one()
+        view = self.env.ref('lpj_production.view_production_ok_form_viewonly')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Order Kerja'),
+            'res_model': 'lpj.production.ok',
+            'view_type': 'form',
+            'view_mode': 'form',
+            'views': [(view.id, 'form')],
+            'res_id': self.ok_id.id,
+            'target': 'new',
+            'flags': {'form': {'action_buttons': False}},
+        }
+
+    @api.multi
+    def action_save_and_done(self):
+        """Tombol 'Simpan & Selesai' di popup Input Hasil -- operator cukup
+        satu ketukan. Validasi hasil/QC tetap dijalankan oleh action_done_line."""
+        self.ensure_one()
+        return self.action_done_line()
 
     @api.multi
     def action_save_result(self):
@@ -1040,7 +1097,7 @@ class ProductionOkLine(models.Model):
         QC (lihat write() override di bawah) dan permintaan validasi SPV
         (kalau ini baris terakhir yang belum Done) sama-sama berjalan."""
         for rec in self:
-            rec.write({'state': 'done'})
+            rec.with_context(line_internal=True).write({'state': 'done'})
             if not rec.date_end:
                 rec.with_context(line_times_internal=True).write(
                     {'date_end': fields.Datetime.now()})
@@ -1048,6 +1105,8 @@ class ProductionOkLine(models.Model):
         # dan tombol Ajukan Validasi di header OK perlu ikut berubah. Klien
         # Odoo 10 cuma me-refresh baris yang diklik, bukan baris lain / header,
         # jadi form OK dibuka ulang supaya langsung ter-update tanpa F5.
+        if self.env.context.get('operator_board'):
+            return {'type': 'ir.actions.client', 'tag': 'reload'}
         if len(self.mapped('ok_id')) == 1:
             return {
                 'type': 'ir.actions.act_window',
@@ -1061,6 +1120,20 @@ class ProductionOkLine(models.Model):
 
     @api.multi
     def write(self, vals):
+        if self.env.context.get('operator_board') and len(vals) == 1 and \
+                not self.env.context.get('line_internal') and \
+                ('workcenter_id' in vals or 'state' in vals):
+            raise UserError(_(
+                "Kartu tidak bisa dipindah dengan digeser. Gunakan tombol "
+                "Mulai / Selesai di kartu."))
+        if vals.get('state') not in ('in_progress', 'done') and any(
+                f in vals for f in ('date_start', 'date_end', 'meter_lari', 'qty_pcs')):
+            for rec in self:
+                if rec.state == 'draft':
+                    raise UserError(_(
+                        "Tahap '%s' belum dimulai -- Start, End, Meter Lari dan "
+                        "Qty Pcs baru bisa diisi setelah tombol Mulai diklik.")
+                        % (rec.workcenter_group_id.name or '-'))
         if ('date_start' in vals or 'date_end' in vals) and \
                 not self.env.context.get('line_times_internal') and \
                 not self._user_can_edit_times():

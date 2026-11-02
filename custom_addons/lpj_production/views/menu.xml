@@ -1,24 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <menuitem id="menu_production_root" web_icon="lpj_production,static/description/icon.png" name="Produksi (OK)" sequence="15"
+    <!-- Satu aplikasi "Produksi" dengan 4 sub menu: PPIC, Produksi, QC, Report -->
+    <menuitem id="menu_production_root" web_icon="lpj_production,static/description/icon.png" name="Produksi" sequence="15"
               groups="lpj_product.group_produksi_user_readonly"/>
 
+    <!-- ===== PPIC ===== -->
+    <menuitem id="menu_ppic" name="PPIC" parent="menu_production_root" sequence="10"
+              groups="lpj_production.group_ppic,lpj_product.group_produksi_supervisor,lpj_product.group_produksi_manager"/>
     <menuitem id="menu_production_planning" name="Planning Order Kerja"
-              parent="menu_production_root" action="action_sale_order_line_planning" sequence="5"/>
-
+              parent="menu_ppic" action="action_sale_order_line_planning" sequence="5"/>
     <menuitem id="menu_production_ok" name="Order Kerja"
-              parent="menu_production_root" action="action_production_ok" sequence="10"/>
+              parent="menu_ppic" action="action_production_ok" sequence="10"/>
 
+    <!-- ===== Produksi (operator) ===== -->
+    <menuitem id="menu_produksi" name="Produksi" parent="menu_production_root" sequence="20"
+              groups="lpj_product.group_produksi_user"/>
+    <menuitem id="menu_operator_board_mine" name="Tugas Saya"
+              parent="menu_produksi" action="action_operator_board_mine" sequence="1"/>
+    <menuitem id="menu_operator_board_all" name="Semua Proses per Mesin"
+              parent="menu_produksi" action="action_operator_board_all" sequence="2"
+              groups="lpj_production.group_ppic,lpj_product.group_produksi_supervisor,lpj_product.group_produksi_manager"/>
 
+    <!-- ===== QC ===== -->
+    <menuitem id="menu_qc" name="QC" parent="menu_production_root" sequence="30"/>
     <menuitem id="menu_production_qc_checklist" name="Checklist QC"
-              parent="menu_production_root" action="action_production_qc_checklist" sequence="20"/>
+              parent="menu_qc" action="action_production_qc_checklist" sequence="10"/>
 
-
-    <menuitem id="menu_production_report" name="Laporan"
+    <!-- ===== Report ===== -->
+    <menuitem id="menu_production_report" name="Report"
               parent="menu_production_root" sequence="80"
               groups="lpj_product.group_produksi_supervisor,lpj_product.group_produksi_manager"/>
-
     <menuitem id="menu_report_output" name="Output Harian"
               parent="menu_production_report" action="action_report_output" sequence="10"/>
     <menuitem id="menu_report_machine" name="Produktivitas Mesin"

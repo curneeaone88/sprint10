@@ -99,8 +99,9 @@
                                         <field name="workcenter_id"/>
                                         <field name="operator_id"/>
                                         <field name="plan_date"/>
-                                        <field name="meter_lari"/>
-                                        <field name="qty_pcs"/>
+                                        <field name="state" invisible="1"/>
+                                        <field name="meter_lari" attrs="{'readonly': [('state','=','draft')]}"/>
+                                        <field name="qty_pcs" attrs="{'readonly': [('state','=','draft')]}"/>
                                         <field name="date_start" readonly="1"/>
                                         <field name="date_end" readonly="1"/>
                                         <field name="notes"/>
@@ -113,10 +114,10 @@
                                     <field name="operator_id"/>
                                     <field name="plan_date"/>
                                     <field name="x_can_edit_times" invisible="1"/>
-                                    <field name="date_start" attrs="{'readonly': [('x_can_edit_times','=',False)]}"/>
-                                    <field name="date_end" attrs="{'readonly': [('x_can_edit_times','=',False)]}"/>
-                                    <field name="meter_lari"/>
-                                    <field name="qty_pcs"/>
+                                    <field name="date_start" attrs="{'readonly': ['|', ('state','=','draft'), ('x_can_edit_times','=',False)]}"/>
+                                    <field name="date_end" attrs="{'readonly': ['|', ('state','=','draft'), ('x_can_edit_times','=',False)]}"/>
+                                    <field name="meter_lari" attrs="{'readonly': [('state','=','draft')]}"/>
+                                    <field name="qty_pcs" attrs="{'readonly': [('state','=','draft')]}"/>
                                     <field name="notes"/>
                                     <field name="state"
                                            decoration-success="state=='done'"
@@ -263,12 +264,101 @@
         </field>
     </record>
 
+    <!-- Form VIEW ONLY OK untuk operator (popup dari kartu Papan Operator). Semua field read-only. -->
+    <record id="view_production_ok_form_viewonly" model="ir.ui.view">
+        <field name="name">lpj.production.ok.form.viewonly</field>
+        <field name="model">lpj.production.ok</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <form string="Order Kerja" create="false" edit="false" delete="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                        <h3><field name="status_terakhir" readonly="1"/></h3>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="state" readonly="1"/>
+                            <field name="order_type" readonly="1"/>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="product_id" readonly="1"/>
+                            <field name="qty_plan" readonly="1"/>
+                            <field name="qty_production" readonly="1"/>
+                            <field name="m2_plan" readonly="1"/>
+                            <field name="m2_production" readonly="1"/>
+                            <field name="routing_display" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="responsible_id" readonly="1"/>
+                            <field name="plan_ok" readonly="1"/>
+                            <field name="duedate_kirim" readonly="1"/>
+                            <field name="source" readonly="1"/>
+                            <field name="x_folder_cetak" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Routing">
+                            <field name="ok_line_ids" readonly="1">
+                                <tree create="false" delete="false" edit="false">
+                                    <field name="sequence" invisible="1"/>
+                                    <field name="workcenter_group_id"/>
+                                    <field name="workcenter_id"/>
+                                    <field name="operator_id"/>
+                                    <field name="plan_date"/>
+                                    <field name="date_start"/>
+                                    <field name="date_end"/>
+                                    <field name="meter_lari"/>
+                                    <field name="qty_pcs"/>
+                                    <field name="state"/>
+                                    <field name="qc_status"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Data Forms">
+                            <group>
+                                <group>
+                                    <field name="x_length" readonly="1"/>
+                                    <field name="x_width" readonly="1"/>
+                                    <field name="x_material_id" readonly="1"/>
+                                    <field name="x_satuan" readonly="1"/>
+                                    <field name="x_type_roll_id" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="x_diecut_id" readonly="1"/>
+                                    <field name="x_diecut_code" readonly="1"/>
+                                    <field name="x_hotprint_code" readonly="1"/>
+                                    <field name="x_feature_ids" widget="many2many_tags" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Layout">
+                                <field name="x_layout_qty_pcs" readonly="1"/>
+                                <field name="x_layout_width" readonly="1"/>
+                                <field name="x_layout_length" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button string="Tutup" special="cancel" class="btn-primary btn-lg"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
     <!-- Form popup input hasil per tahap, dibuka dari tombol Input Hasil di kartu mobile. -->
     <record id="view_production_ok_line_result_form" model="ir.ui.view">
         <field name="name">lpj.production.ok.line.result.form</field>
         <field name="model">lpj.production.ok.line</field>
         <field name="arch" type="xml">
-            <form>
+            <form class="o_ok_result_form">
+                <field name="state" invisible="1"/>
+                <field name="qc_required" invisible="1"/>
+                <field name="qc_status" invisible="1"/>
+                <div class="o_operator_result">
                 <group>
                     <field name="workcenter_group_id" readonly="1"/>
                     <field name="input_mode" invisible="1"/>
@@ -278,8 +368,12 @@
                     <field name="qty_pcs"/>
                     <field name="notes"/>
                 </group>
+                </div>
                 <footer>
                     <button string="Simpan" name="action_save_result" type="object" class="btn-primary btn-lg"/>
+                    <button string="Simpan &amp; Selesai" name="action_save_and_done" type="object"
+                            class="btn-success btn-lg"
+                            attrs="{'invisible': ['|', ('state','!=','in_progress'), '&amp;', ('qc_required','=',True), ('qc_status','not in',['ok','not_ok'])]}"/>
                     <button string="Batal" special="cancel" class="btn-lg"/>
                 </footer>
             </form>

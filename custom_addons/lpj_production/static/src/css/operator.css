@@ -1,0 +1,19 @@
+/* Papan Operator -- tablet Android 9" landscape (sentuh) */
+.o_operator_board .o_kanban_group { min-width: 340px; width: 340px; }
+.o_operator_board .o_kanban_record { width: 100%; margin: 0 0 14px 0; }
+.o_operator_board .o_kanban_header .o_column_title { font-size: 20px; font-weight: 700; }
+.o_operator_board .op_card { padding: 14px 16px; font-size: 16px; line-height: 1.35; }
+.o_operator_board .op_title { font-size: 21px; font-weight: 700; }
+.o_operator_board .op_ok { font-size: 17px; }
+.o_operator_board .op_info { font-size: 15px; color: #555; }
+.o_operator_board .op_card .label { font-size: 14px; padding: 4px 8px; }
+.o_operator_board .op_btn.btn { min-height: 58px; font-size: 20px; font-weight: 600; margin-top: 8px; white-space: normal; }
+
+/* Popup Input Hasil */
+.o_operator_result .o_group .o_td_label,
+.o_operator_result label { font-size: 20px; font-weight: 600; }
+.o_operator_result input.o_form_input,
+.o_operator_result .o_form_field input,
+.o_operator_result textarea { font-size: 28px !important; height: 64px; text-align: right; }
+.o_operator_result textarea { height: 90px; text-align: left; font-size: 20px !important; }
+.modal-footer .btn-lg, .o_operator_result_footer .btn { min-height: 58px; font-size: 20px; min-width: 150px; }
