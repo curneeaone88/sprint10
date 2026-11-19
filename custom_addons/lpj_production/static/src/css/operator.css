@@ -17,3 +17,5 @@
 .o_operator_result textarea { font-size: 28px !important; height: 64px; text-align: right; }
 .o_operator_result textarea { height: 90px; text-align: left; font-size: 20px !important; }
 .modal-footer .btn-lg, .o_operator_result_footer .btn { min-height: 58px; font-size: 20px; min-width: 150px; }
+
+.o_operator_board .op_prev { background: #eef6ff; border-radius: 4px; padding: 4px 8px; margin: 4px 0; color: #1d4e89; font-weight: 600; }

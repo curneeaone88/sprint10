@@ -7,3 +7,4 @@ from . import product_extend
 from . import product_bom
 from . import qc_item_template
 from . import sale_order_design
+from . import product_history

@@ -19,6 +19,11 @@ class LpjRouting(models.Model):
     code = fields.Char(string='Kode')
     active = fields.Boolean(default=True)
     line_ids = fields.One2many('lpj.routing.line', 'routing_id', string='Tahapan')
+    x_ref_days = fields.Integer(
+        string='Hari Referensi Kirim', default=0,
+        help="Kalau diisi (lebih dari 0): Tanggal Referensi Kirim di OK = tanggal "
+             "SO confirm + jumlah hari ini, dan aturan di Pengaturan Produksi "
+             "TIDAK dipakai. Isi 0 supaya hari diambil dari Pengaturan Produksi.")
     line_count = fields.Integer(compute='_compute_line_count', string='Jumlah Tahapan')
     routing_display = fields.Char(compute='_compute_line_count', string='Ringkasan')
 

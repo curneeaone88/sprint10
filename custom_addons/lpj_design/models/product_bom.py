@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 
 
 class ProductBomLine(models.Model):
@@ -50,3 +50,33 @@ class ProductBomLine(models.Model):
              "1 layout. Total qty yang keluar dari stok saat OK selesai = "
              "angka ini x jumlah layout (Total Meter Lari OK / Panjang per "
              "Layout produk).")
+
+    def _history_text(self):
+        self.ensure_one()
+        return u"%s: %s %s per layout" % (
+            self.material_product_id.display_name or u'-',
+            self.qty_per_unit, self.material_uom_id.name or u'')
+
+    @api.model
+    def create(self, vals):
+        rec = super(ProductBomLine, self).create(vals)
+        rec.product_tmpl_id._post_history([(_(u'BOM'), u'-', u'%s (ditambah)' % rec._history_text())])
+        return rec
+
+    @api.multi
+    def write(self, vals):
+        tracked = [f for f in ('material_product_id', 'qty_per_unit') if f in vals]
+        before = dict((r.id, r._history_text()) for r in self) if tracked else {}
+        res = super(ProductBomLine, self).write(vals)
+        for r in self:
+            if tracked and before.get(r.id) != r._history_text():
+                r.product_tmpl_id._post_history(
+                    [(_(u'BOM'), before[r.id], r._history_text())])
+        return res
+
+    @api.multi
+    def unlink(self):
+        for r in self:
+            r.product_tmpl_id._post_history(
+                [(_(u'BOM'), r._history_text(), u'(dihapus)')])
+        return super(ProductBomLine, self).unlink()

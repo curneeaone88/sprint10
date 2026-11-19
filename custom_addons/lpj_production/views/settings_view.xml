@@ -6,14 +6,21 @@
         <field name="inherit_id" ref="lpj_design.view_production_settings_form"/>
         <field name="arch" type="xml">
             <xpath expr="//footer" position="before">
-                <group string="Order Kerja (OK)">
-                    <field name="x_ok_ref_days"/>
-                    <div class="text-muted">
-                        Tanggal Referensi Kirim di OK = tanggal SO di-confirm + jumlah hari
-                        ini. Duedate Kirim OK default-nya sama dengan tanggal referensi,
-                        lalu bisa diubah oleh PPIC. Perubahan angka ini hanya berlaku untuk
-                        OK yang dibuat sesudahnya.
+                <group string="Tanggal Referensi Kirim OK">
+                    <div class="text-muted" colspan="2">
+                        Tanggal Referensi Kirim = tanggal SO confirm + jumlah hari.
+                        Urutan prioritas: (1) Hari Referensi di Master Routing kalau diisi;
+                        (2) aturan nominal SO kalau batas nominal dan harinya diisi;
+                        (3) aturan jenis OK (New / Repeat). Hanya berlaku untuk OK yang
+                        dibuat sesudahnya.
                     </div>
+                    <separator string="Berdasarkan nominal SO" colspan="2"/>
+                    <field name="x_ok_ref_nominal_limit"/>
+                    <field name="x_ok_ref_days_lower"/>
+                    <field name="x_ok_ref_days_greater"/>
+                    <separator string="Berdasarkan jenis OK" colspan="2"/>
+                    <field name="x_ok_ref_days_new"/>
+                    <field name="x_ok_ref_days_repeat"/>
                 </group>
             </xpath>
         </field>

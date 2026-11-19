@@ -21,6 +21,7 @@
                 <field name="plan_date"/>
                 <field name="meter_lari"/>
                 <field name="qty_pcs"/>
+                <field name="prev_result_text"/>
                 <field name="state"/>
                 <field name="qc_status"/>
                 <field name="qc_required"/>
@@ -44,6 +45,9 @@
                             <div t-if="record.meter_lari.raw_value || record.qty_pcs.raw_value" class="op_info">
                                 <span t-if="record.meter_lari.raw_value"><field name="meter_lari"/> m lari</span>
                                 <span t-if="record.qty_pcs.raw_value"> <field name="qty_pcs"/> pcs</span>
+                            </div>
+                            <div t-if="record.prev_result_text.raw_value" class="op_info op_prev">
+                                <i class="fa fa-arrow-left"/> Sebelumnya: <field name="prev_result_text"/>
                             </div>
                             <div style="margin: 6px 0;">
                                 <span class="label label-warning" t-if="record.qc_required.raw_value &amp;&amp; record.state.raw_value == 'in_progress' &amp;&amp; record.qc_status.raw_value != 'ok' &amp;&amp; record.qc_status.raw_value != 'not_ok'">QC belum</span>

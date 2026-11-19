@@ -100,8 +100,9 @@
                                         <field name="operator_id"/>
                                         <field name="plan_date"/>
                                         <field name="state" invisible="1"/>
-                                        <field name="meter_lari" attrs="{'readonly': [('state','=','draft')]}"/>
-                                        <field name="qty_pcs" attrs="{'readonly': [('state','=','draft')]}"/>
+                                        <field name="input_mode" invisible="1"/>
+                                        <field name="meter_lari" attrs="{'readonly': ['|', ('state','=','draft'), ('input_mode','=','qty_pcs')]}"/>
+                                        <field name="qty_pcs" force_save="1" attrs="{'readonly': ['|', ('state','=','draft'), ('input_mode','=','meter_lari')]}"/>
                                         <field name="date_start" readonly="1"/>
                                         <field name="date_end" readonly="1"/>
                                         <field name="notes"/>
@@ -116,10 +117,11 @@
                                     <field name="x_can_edit_times" invisible="1"/>
                                     <field name="date_start" attrs="{'readonly': ['|', ('state','=','draft'), ('x_can_edit_times','=',False)]}"/>
                                     <field name="date_end" attrs="{'readonly': ['|', ('state','=','draft'), ('x_can_edit_times','=',False)]}"/>
-                                    <field name="meter_lari" attrs="{'readonly': [('state','=','draft')]}"/>
-                                    <field name="qty_pcs" attrs="{'readonly': [('state','=','draft')]}"/>
+                                    <field name="input_mode" invisible="1"/>
+                                    <field name="meter_lari" attrs="{'readonly': ['|', ('state','=','draft'), ('input_mode','=','qty_pcs')]}"/>
+                                    <field name="qty_pcs" force_save="1" attrs="{'readonly': ['|', ('state','=','draft'), ('input_mode','=','meter_lari')]}"/>
                                     <field name="notes"/>
-                                    <field name="state"
+                                    <field name="state" readonly="1"
                                            decoration-success="state=='done'"
                                            decoration-info="state=='in_progress'"/>
                                     <field name="qc_status"
@@ -363,9 +365,12 @@
                     <field name="workcenter_group_id" readonly="1"/>
                     <field name="input_mode" invisible="1"/>
                     <field name="ok_id" invisible="1"/>
+                    <field name="prev_result_text" readonly="1"
+                           attrs="{'invisible': [('prev_result_text','=',False)]}"/>
                     <field name="meter_lari"
                            attrs="{'invisible': [('input_mode','=','qty_pcs')]}"/>
-                    <field name="qty_pcs"/>
+                    <field name="qty_pcs" force_save="1"
+                           attrs="{'readonly': [('input_mode','=','meter_lari')]}"/>
                     <field name="notes"/>
                 </group>
                 </div>

@@ -33,6 +33,11 @@ class SaleOrderLineDesign(models.Model):
     x_design_missing = fields.Char(
         string='Data yang Belum Lengkap',
         related='product_id.product_tmpl_id.x_design_missing', readonly=True)
+    x_so_confirm_date = fields.Datetime(
+        related='order_id.confirmation_date', string='Tgl Konfirmasi SO',
+        store=True, readonly=True,
+        help="Dipakai untuk mengurutkan Kanban Desain: yang paling lama "
+             "dikonfirmasi ada di atas.")
     x_design_customer_id = fields.Many2one(
         'res.partner', related='order_id.partner_id', string='Customer',
         readonly=True)
@@ -82,6 +87,13 @@ class SaleOrderLineDesign(models.Model):
         if line.order_id.state in ('sale', 'done'):
             line._init_design_status()
         return line
+
+    @api.model
+    def search(self, args, offset=0, limit=None, order=None, count=False):
+        if self.env.context.get('design_board') and not order:
+            order = 'x_so_confirm_date asc, id asc'
+        return super(SaleOrderLineDesign, self).search(
+            args, offset=offset, limit=limit, order=order, count=count)
 
     @api.multi
     def write(self, vals):

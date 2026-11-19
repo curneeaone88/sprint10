@@ -150,6 +150,22 @@ class ProductionQcChecklistItem(models.Model):
     ], string='Hasil')
     note = fields.Char(string='Catatan')
 
+    @api.model
+    def create(self, vals):
+        if not self.env.context.get('qc_items_internal'):
+            raise UserError(_(
+                "Aktivitas QC tidak bisa ditambah manual -- daftar aktivitas "
+                "diambil dari Master Aktivitas QC."))
+        return super(ProductionQcChecklistItem, self).create(vals)
+
+    @api.multi
+    def unlink(self):
+        if not self.env.context.get('qc_items_internal'):
+            raise UserError(_(
+                "Aktivitas QC tidak bisa dihapus -- daftar aktivitas "
+                "diambil dari Master Aktivitas QC."))
+        return super(ProductionQcChecklistItem, self).unlink()
+
     @api.multi
     def _check_checklist_editable(self):
         for rec in self:

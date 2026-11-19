@@ -57,6 +57,11 @@
                                         class="btn btn-sm btn-default">
                                     <i class="fa fa-pencil"/> Buka Master Produk
                                 </button>
+                                <button t-if="record.x_design_status.raw_value == 'done'"
+                                        name="action_design_open_product" type="object"
+                                        class="btn btn-sm btn-default">
+                                    <i class="fa fa-eye"/> Buka Master Produk
+                                </button>
                                 <button t-if="record.x_design_status.raw_value == 'in_progress'"
                                         name="action_design_done" type="object"
                                         class="btn btn-sm btn-success">
@@ -126,7 +131,7 @@
             ('x_design_status', '!=', 'na'),
             ('order_id.state', 'in', ['sale', 'done'])
         ]</field>
-        <field name="context">{'search_default_filter_not_done': 1}</field>
+        <field name="context">{'search_default_filter_not_done': 1, 'design_board': 1}</field>
         <field name="help">Item SO yang punya SQ dan perlu dilengkapi data produknya (Routing, Layout) oleh tim Desain sebelum bisa dibuatkan OK.</field>
     </record>
 

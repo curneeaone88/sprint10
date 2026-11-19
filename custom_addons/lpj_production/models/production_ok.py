@@ -337,9 +337,29 @@ class ProductionOk(models.Model):
                     u.has_group('lpj_product.group_produksi_manager'))
 
     @api.model
-    def _calc_ref_kirim(self, sale_order):
-        """SO confirm date + hari standar (res.company.x_ok_ref_days)."""
-        days = self.env.user.company_id.x_ok_ref_days or 0
+    def _calc_ref_days(self, sale_order, order_type, routing):
+        """Prioritas: (1) Hari Referensi di Master Routing (>0);
+        (2) aturan nominal SO (batas > 0 dan hari sisi yang kena > 0);
+        (3) aturan jenis OK (New / Repeat); (4) 0."""
+        if routing and routing.x_ref_days and routing.x_ref_days > 0:
+            return routing.x_ref_days
+        comp = self.env.user.company_id
+        limit = (comp.x_ok_ref_nominal_limit or 0.0) * 1000000.0
+        if limit > 0 and sale_order:
+            if (sale_order.amount_total or 0.0) >= limit:
+                days = comp.x_ok_ref_days_greater
+            else:
+                days = comp.x_ok_ref_days_lower
+            if days and days > 0:
+                return days
+        if order_type == 'repeat':
+            return comp.x_ok_ref_days_repeat or 0
+        return comp.x_ok_ref_days_new or 0
+
+    @api.model
+    def _calc_ref_kirim(self, sale_order, order_type=None, routing=None):
+        """Tanggal SO confirm + hari (lihat _calc_ref_days)."""
+        days = self._calc_ref_days(sale_order, order_type, routing)
         base = None
         conf = getattr(sale_order, 'confirmation_date', False) or \
             (sale_order and sale_order.date_order)
@@ -352,14 +372,35 @@ class ProductionOk(models.Model):
 
     @api.multi
     def write(self, vals):
-        if 'duedate_kirim' in vals and not self._user_can_edit_duedate():
+        if 'state' in vals and not self.env.context.get('ok_internal'):
+            raise UserError(_(
+                "Status OK tidak bisa diubah dengan cara digeser/diklik di "
+                "Kanban atau status bar. Gunakan tombol proses di form OK."))
+        if 'duedate_kirim' in vals and not self.env.context.get('ok_ref_skip') \
+                and not self._user_can_edit_duedate():
             raise UserError(_(
                 "Duedate Kirim hanya boleh diubah oleh PPIC, Supervisor atau Manager."))
         if vals.get('state') == 'done':
             vals = dict(vals, date_done=fields.Datetime.now())
         elif vals.get('state') and vals['state'] != 'done':
             vals = dict(vals, date_done=False)
-        return super(ProductionOk, self).write(vals)
+        res = super(ProductionOk, self).write(vals)
+        if ('routing_id' in vals or 'order_type' in vals) and \
+                not self.env.context.get('ok_ref_skip'):
+            # OK masih Draft: hitung ulang Tanggal Referensi kalau routing /
+            # jenis OK berubah; Duedate ikut berubah kalau belum diubah manual.
+            for rec in self.filtered(lambda r: r.state == 'draft' and r.sale_order_id):
+                new_ref = rec._calc_ref_kirim(
+                    rec.sale_order_id, rec.order_type, rec.routing_id)
+                if new_ref == rec.x_ref_kirim:
+                    continue
+                upd = {'x_ref_kirim': new_ref}
+                follows = (not rec.duedate_kirim) or \
+                    rec.duedate_kirim[:10] == rec.x_ref_kirim
+                if follows and 'duedate_kirim' not in vals:
+                    upd['duedate_kirim'] = new_ref + ' 00:00:00'
+                rec.with_context(ok_ref_skip=True).write(upd)
+        return res
 
     @api.multi
     def _get_jumlah_layout(self):
@@ -417,7 +458,10 @@ class ProductionOk(models.Model):
 
             # Tanggal Referensi Kirim & default Duedate Kirim
             if not vals.get('x_ref_kirim'):
-                vals['x_ref_kirim'] = self._calc_ref_kirim(sol.order_id)
+                vals['x_ref_kirim'] = self._calc_ref_kirim(
+                    sol.order_id, vals.get('order_type'),
+                    self.env['lpj.routing'].browse(vals.get('routing_id') or [])
+                    if vals.get('routing_id') else self.env['lpj.routing'])
             if not vals.get('duedate_kirim'):
                 vals['duedate_kirim'] = vals['x_ref_kirim'] + ' 00:00:00'
 
@@ -447,7 +491,7 @@ class ProductionOk(models.Model):
             # diisi manual per baris tidak ditimpa).
             rec.ok_line_ids.filtered(lambda l: not l.plan_date).write(
                 {'plan_date': rec.plan_ok})
-            rec.state = 'confirmed'
+            rec.with_context(ok_internal=True).write({'state': 'confirmed'})
         return True
 
     @api.multi
@@ -475,7 +519,8 @@ class ProductionOk(models.Model):
         """Confirmed -> In Progress. Bisa diklik manual, atau dipanggil
         otomatis dari ProductionOkLine.action_start_line() saat baris
         pertama mulai dikerjakan."""
-        self.filtered(lambda r: r.state == 'confirmed').write({'state': 'in_progress'})
+        self.filtered(lambda r: r.state == 'confirmed').with_context(
+            ok_internal=True).write({'state': 'in_progress'})
         return True
 
     @api.multi
@@ -494,7 +539,8 @@ class ProductionOk(models.Model):
                 raise UserError(_(
                     "Belum bisa mengajukan validasi -- masih ada baris Routing "
                     "yang belum Done."))
-        self.filtered(lambda r: r.state == 'in_progress').write({'state': 'to_validate'})
+        self.filtered(lambda r: r.state == 'in_progress').with_context(
+            ok_internal=True).write({'state': 'to_validate'})
         return True
 
     @api.multi
@@ -523,7 +569,7 @@ class ProductionOk(models.Model):
                 raise UserError(_(
                     "Qty Production wajib diisi sebelum OK bisa divalidasi selesai."))
 
-            rec.state = 'done'
+            rec.with_context(ok_internal=True).write({'state': 'done'})
             rec._trigger_auto_stock_picking()
             rec._trigger_auto_material_picking()
 
@@ -555,7 +601,7 @@ class ProductionOk(models.Model):
             if not rec.qty_production:
                 raise UserError(_(
                     "Qty Production wajib diisi sebelum OK bisa diselesaikan."))
-            rec.state = 'done'
+            rec.with_context(ok_internal=True).write({'state': 'done'})
             rec._trigger_auto_stock_picking()
             rec._trigger_auto_material_picking()
         if len(self) == 1 and self.qty_production < self.qty_plan:
@@ -572,7 +618,7 @@ class ProductionOk(models.Model):
 
     @api.multi
     def action_cancel(self):
-        self.write({'state': 'cancel'})
+        self.with_context(ok_internal=True).write({'state': 'cancel'})
         return True
 
     @api.multi
@@ -581,7 +627,7 @@ class ProductionOk(models.Model):
         diproses ulang. OK Line lama TIDAK dihapus (biar histori tetap
         ada) -- kalau routing_id masih ada dan mau digenerate ulang,
         cukup hapus manual OK Line yang lama dulu sebelum Confirm lagi."""
-        self.write({'state': 'draft'})
+        self.with_context(ok_internal=True).write({'state': 'draft'})
         return True
 
     @api.multi
@@ -798,6 +844,56 @@ class ProductionOkLine(models.Model):
                     u.has_group('lpj_product.group_produksi_supervisor') or
                     u.has_group('lpj_product.group_produksi_manager'))
 
+    prev_meter_lari = fields.Float(
+        string='Meter Lari Tahap Sebelumnya', compute='_compute_prev_result')
+    prev_qty_pcs = fields.Float(
+        string='Qty Pcs Tahap Sebelumnya', compute='_compute_prev_result')
+    prev_result_text = fields.Char(
+        string='Hasil Tahap Sebelumnya', compute='_compute_prev_result')
+
+    @api.multi
+    @api.depends('ok_id.ok_line_ids.sequence', 'ok_id.ok_line_ids.meter_lari',
+                 'ok_id.ok_line_ids.qty_pcs')
+    def _compute_prev_result(self):
+        def fmt(v):
+            return ('%.2f' % v).rstrip('0').rstrip('.')
+        for rec in self:
+            prevs = rec.ok_id.ok_line_ids.filtered(
+                lambda l: l.id != rec.id and (l.sequence, l.id) < (rec.sequence, rec.id)
+            ).sorted(key=lambda l: (l.sequence, l.id), reverse=True)
+            pm = next((l for l in prevs if l.meter_lari), False)
+            pq = next((l for l in prevs if l.qty_pcs), False)
+            rec.prev_meter_lari = pm.meter_lari if pm else 0.0
+            rec.prev_qty_pcs = pq.qty_pcs if pq else 0.0
+            parts = []
+            if pm:
+                parts.append(u"%s m lari (%s)" % (fmt(pm.meter_lari), pm.workcenter_group_id.name or '-'))
+            if pq:
+                parts.append(u"%s pcs (%s)" % (fmt(pq.qty_pcs), pq.workcenter_group_id.name or '-'))
+            rec.prev_result_text = u" | ".join(parts)
+
+    @api.constrains('meter_lari', 'qty_pcs')
+    def _check_not_exceed_previous(self):
+        """Hasil tahap berjalan tidak boleh melebihi hasil tahap sebelumnya
+        (jumlah tidak mungkin bertambah). Dibandingkan per jenis (meter lari
+        dengan meter lari, pcs dengan pcs) terhadap tahap terdekat sebelumnya
+        yang sudah terisi."""
+        eps = 0.000001
+        for ok in self.mapped('ok_id'):
+            last = {}
+            for l in ok.ok_line_ids.sorted(key=lambda x: (x.sequence, x.id)):
+                for fname, label in (('meter_lari', u'Meter Lari'), ('qty_pcs', u'Qty Pcs')):
+                    val = l[fname]
+                    if not val:
+                        continue
+                    if fname in last and val > last[fname][0] + eps:
+                        raise UserError(_(
+                            u"%s tahap '%s' (%s) tidak boleh melebihi tahap "
+                            u"sebelumnya '%s' (%s).") % (
+                            label, l.workcenter_group_id.name or '-', val,
+                            last[fname][1], last[fname][0]))
+                    last[fname] = (val, l.workcenter_group_id.name or '-')
+
     @api.constrains('date_start', 'date_end')
     def _check_end_after_start(self):
         for rec in self:
@@ -952,7 +1048,8 @@ class ProductionOkLine(models.Model):
             mode = rec.workcenter_group_id.x_input_mode
             name = rec.workcenter_group_id.name or '-'
             if mode == 'meter_lari' and rec.meter_lari and not rec.qty_pcs:
-                rec.qty_pcs = rec._calc_qty_pcs_from_meter()
+                rec.with_context(line_internal=True).write(
+                    {'qty_pcs': rec._calc_qty_pcs_from_meter()})
             if mode == 'meter_lari' and not rec.meter_lari:
                 raise UserError(_(
                     "Tahap '%s' belum bisa diselesaikan: isi Meter Lari dulu "
@@ -1101,6 +1198,12 @@ class ProductionOkLine(models.Model):
             if not rec.date_end:
                 rec.with_context(line_times_internal=True).write(
                     {'date_end': fields.Datetime.now()})
+        # Tahap terakhir (mis. Packing) selesai -> semua routing Done -> OK
+        # otomatis berstatus 'Menunggu Validasi SPV' (tanpa klik Ajukan
+        # Validasi lagi). Validasi akhir tetap oleh SPV/Manager.
+        for ok in self.mapped('ok_id'):
+            if ok.state == 'in_progress' and ok.all_lines_done:
+                ok.action_request_validation()
         # Begitu satu tahap Done, tombol Mulai di tahap berikutnya (can_start)
         # dan tombol Ajukan Validasi di header OK perlu ikut berubah. Klien
         # Odoo 10 cuma me-refresh baris yang diklik, bukan baris lain / header,
@@ -1120,12 +1223,26 @@ class ProductionOkLine(models.Model):
 
     @api.multi
     def write(self, vals):
-        if self.env.context.get('operator_board') and len(vals) == 1 and \
-                not self.env.context.get('line_internal') and \
-                ('workcenter_id' in vals or 'state' in vals):
+        if 'state' in vals and not self.env.context.get('line_internal'):
             raise UserError(_(
-                "Kartu tidak bisa dipindah dengan digeser. Gunakan tombol "
-                "Mulai / Selesai di kartu."))
+                "Status tahap tidak bisa diubah dengan digeser. Gunakan "
+                "tombol Mulai / Selesai."))
+        if not self.env.context.get('line_internal'):
+            if 'qty_pcs' in vals:
+                meter = self.filtered(
+                    lambda r: r.workcenter_group_id.x_input_mode == 'meter_lari')
+                if meter:
+                    if len(meter) != len(self):
+                        raise UserError(_(
+                            "Tahap bermode Meter Lari dan Qty Pcs tidak boleh "
+                            "diubah bersamaan."))
+                    # Qty Pcs dihitung otomatis dari Meter Lari x Layout
+                    vals = dict(vals)
+                    vals.pop('qty_pcs')
+            if vals.get('meter_lari') and any(
+                    r.workcenter_group_id.x_input_mode == 'qty_pcs' for r in self):
+                raise UserError(_(
+                    "Tahap ini bermode Qty Pcs -- Meter Lari tidak diisi."))
         if vals.get('state') not in ('in_progress', 'done') and any(
                 f in vals for f in ('date_start', 'date_end', 'meter_lari', 'qty_pcs')):
             for rec in self:
@@ -1154,10 +1271,9 @@ class ProductionOkLine(models.Model):
         res = super(ProductionOkLine, self).write(vals)
         if 'meter_lari' in vals:
             for rec in self:
-                if not rec.qty_pcs:
-                    qty = rec._calc_qty_pcs_from_meter()
-                    if qty:
-                        rec.qty_pcs = qty
+                qty = rec._calc_qty_pcs_from_meter()
+                if qty:
+                    rec.with_context(line_internal=True).write({'qty_pcs': qty})
         # PENTING -- SENGAJA TIDAK auto-pindah ke "Menunggu Validasi SPV" di
         # sini lagi begitu baris terakhir Done. OK header tetap di
         # 'in_progress'; tombol 'Ajukan Validasi' di header (lihat
@@ -1184,7 +1300,8 @@ class ProductionOkLine(models.Model):
         if not checklist:
             templates = self.env['lpj.qc.item.template'].search(
                 [('workcenter_group_id', '=', self.workcenter_group_id.id)])
-            checklist = self.env['lpj.production.qc.checklist'].create({
+            checklist = self.env['lpj.production.qc.checklist'].with_context(
+                qc_items_internal=True).create({
                 'ok_line_id': self.id,
                 'item_ids': [(0, 0, {
                     'item_template_id': t.id,
